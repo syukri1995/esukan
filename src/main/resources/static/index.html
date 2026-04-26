@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Sukan — Campus Facility & Equipment Booking</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<!-- Sidebar Navigation -->
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon">⚡</div>
+        <div>
+            <div class="brand-name">E-Sukan</div>
+            <div class="brand-sub">Campus Sports Hub</div>
+        </div>
+    </div>
+    <nav class="sidebar-nav">
+        <a href="#" class="nav-item active" data-page="dashboard">
+            <span class="nav-icon">▦</span> Dashboard
+        </a>
+        <a href="#" class="nav-item" data-page="facilities">
+            <span class="nav-icon">🏟</span> Facilities
+        </a>
+        <a href="#" class="nav-item" data-page="bookings">
+            <span class="nav-icon">📅</span> Bookings
+        </a>
+        <a href="#" class="nav-item" data-page="equipment">
+            <span class="nav-icon">🎾</span> Equipment
+        </a>
+        <a href="#" class="nav-item" data-page="rentals">
+            <span class="nav-icon">📦</span> Rentals
+        </a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-chip">
+            <div class="user-avatar">FM</div>
+            <div>
+                <div class="user-name">Facility Manager</div>
+                <div class="user-role">Admin</div>
+            </div>
+        </div>
+    </div>
+</aside>
+
+<!-- Main Content -->
+<main class="main">
+
+    <!-- TOP BAR -->
+    <header class="topbar">
+        <div class="page-title" id="pageTitle">Dashboard</div>
+        <div class="topbar-right">
+            <div class="search-box">
+                <input type="text" placeholder="Search..." id="globalSearch">
+            </div>
+            <button class="btn-primary" id="topbarActionBtn" onclick="openPrimaryAction()">+ New Booking</button>
+        </div>
+    </header>
+
+    <!-- DASHBOARD PAGE -->
+    <section class="page active" id="page-dashboard">
+        <div class="stats-grid">
+            <div class="stat-card stat-green">
+                <div class="stat-label">Total Bookings</div>
+                <div class="stat-value" id="stat-total">—</div>
+                <div class="stat-sub">All time</div>
+            </div>
+            <div class="stat-card stat-blue">
+                <div class="stat-label">Today's Bookings</div>
+                <div class="stat-value" id="stat-today">—</div>
+                <div class="stat-sub">Active sessions</div>
+            </div>
+            <div class="stat-card stat-orange">
+                <div class="stat-label">Pending Approval</div>
+                <div class="stat-value" id="stat-pending">—</div>
+                <div class="stat-sub">Needs action</div>
+            </div>
+            <div class="stat-card stat-red">
+                <div class="stat-label">Unhealthy Equipment</div>
+                <div class="stat-value" id="stat-unhealthy">—</div>
+                <div class="stat-sub">Damaged / Maintenance</div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Inventory Health Report</div>
+                </div>
+                <div class="health-bars" id="healthBars">
+                    <div class="loading-msg">Loading...</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Peak Usage Hours</div>
+                    <select id="peakFacilitySelect" onchange="loadPeakHours()" class="select-sm">
+                        <option value="">Select facility...</option>
+                    </select>
+                </div>
+                <div class="peak-chart" id="peakChart">
+                    <div class="loading-msg">Select a facility to view peak hours</div>
+                </div>
+            </div>
+
+            <div class="card full-width">
+                <div class="card-header">
+                    <div class="card-title">Today's Schedule</div>
+                    <span class="badge badge-blue" id="todayCount">0 bookings</span>
+                </div>
+                <table class="table" id="todayTable">
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>ID</th>
+                            <th>Facility</th>
+                            <th>Time</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="todayTableBody">
+                        <tr><td colspan="6" class="loading-msg">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- FACILITIES PAGE -->
+    <section class="page" id="page-facilities">
+        <div class="page-toolbar">
+            <div class="filter-group">
+                <button class="filter-btn active" data-filter="ALL" onclick="filterFacilities(this, 'ALL')">All</button>
+                <button class="filter-btn" data-filter="BADMINTON" onclick="filterFacilities(this, 'BADMINTON')">Badminton</button>
+                <button class="filter-btn" data-filter="FUTSAL" onclick="filterFacilities(this, 'FUTSAL')">Futsal</button>
+            </div>
+        </div>
+        <div class="cards-grid" id="facilitiesGrid">
+            <div class="loading-msg">Loading facilities...</div>
+        </div>
+    </section>
+
+    <!-- BOOKINGS PAGE -->
+    <section class="page" id="page-bookings">
+        <div class="page-toolbar">
+            <div class="filter-group">
+                <button class="filter-btn active" onclick="filterBookings(this, 'ALL')">All</button>
+                <button class="filter-btn" onclick="filterBookings(this, 'PENDING')">Pending</button>
+                <button class="filter-btn" onclick="filterBookings(this, 'CONFIRMED')">Confirmed</button>
+                <button class="filter-btn" onclick="filterBookings(this, 'CANCELLED')">Cancelled</button>
+            </div>
+        </div>
+        <div class="card">
+            <table class="table" id="bookingsTable">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Student</th>
+                        <th>Student ID</th>
+                        <th>Facility</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="bookingsTableBody">
+                    <tr><td colspan="8" class="loading-msg">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- EQUIPMENT PAGE -->
+    <section class="page" id="page-equipment">
+        <div class="page-toolbar">
+            <div class="filter-group">
+                <button class="filter-btn active" onclick="filterEquipment(this, 'ALL')">All</button>
+                <button class="filter-btn" onclick="filterEquipment(this, 'AVAILABLE')">Available</button>
+                <button class="filter-btn" onclick="filterEquipment(this, 'DAMAGED')">Damaged</button>
+                <button class="filter-btn" onclick="filterEquipment(this, 'IN_MAINTENANCE')">In Maintenance</button>
+            </div>
+        </div>
+        <div class="card">
+            <table class="table" id="equipmentTable">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Equipment</th>
+                        <th>Category</th>
+                        <th>Status</th>
+                        <th>Quantity</th>
+                        <th>Last Updated</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="equipmentTableBody">
+                    <tr><td colspan="7" class="loading-msg">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- RENTALS PAGE -->
+    <section class="page" id="page-rentals">
+        <div class="page-toolbar">
+            <div class="filter-group">
+                <button class="filter-btn active" onclick="filterRentals(this, 'ALL')">All</button>
+                <button class="filter-btn" onclick="filterRentals(this, 'ACTIVE')">Active</button>
+                <button class="filter-btn" onclick="filterRentals(this, 'RETURNED')">Returned</button>
+                <button class="filter-btn" onclick="filterRentals(this, 'OVERDUE')">Overdue</button>
+            </div>
+        </div>
+        <div class="card">
+            <table class="table" id="rentalsTable">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Student</th>
+                        <th>Student ID</th>
+                        <th>Equipment</th>
+                        <th>Qty</th>
+                        <th>Rental Date</th>
+                        <th>Return Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="rentalsTableBody">
+                    <tr><td colspan="9" class="loading-msg">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</main>
+
+<!-- MODAL OVERLAY -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal()"></div>
+
+<!-- BOOKING MODAL -->
+<div class="modal" id="bookingModal">
+    <div class="modal-header">
+        <h2 class="modal-title">New Booking</h2>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <form id="bookingForm">
+        <div class="form-row">
+            <div class="form-group">
+                <label>Student Name</label>
+                <input type="text" id="bStudentName" placeholder="Full name" required>
+            </div>
+            <div class="form-group">
+                <label>Student ID</label>
+                <input type="text" id="bStudentId" placeholder="e.g. S001234" required>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Student Email</label>
+            <input type="email" id="bStudentEmail" placeholder="student@university.edu.my" required>
+        </div>
+        <div class="form-group">
+            <label>Facility</label>
+            <select id="bFacility" required>
+                <option value="">Select a facility...</option>
+            </select>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Booking Date</label>
+                <input type="date" id="bDate" required>
+            </div>
+            <div class="form-group">
+                <label>Start Time</label>
+                <input type="time" id="bStartTime" required>
+            </div>
+            <div class="form-group">
+                <label>End Time</label>
+                <input type="time" id="bEndTime" required>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Notes (optional)</label>
+            <textarea id="bNotes" rows="2" placeholder="Any additional notes..."></textarea>
+        </div>
+        <div class="form-error" id="bookingError"></div>
+        <div class="modal-actions">
+            <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
+            <button type="submit" class="btn-primary">Submit Booking</button>
+        </div>
+    </form>
+</div>
+
+<!-- RENTAL MODAL -->
+<div class="modal" id="rentalModal">
+    <div class="modal-header">
+        <h2 class="modal-title">New Equipment Rental</h2>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <form id="rentalForm">
+        <div class="form-row">
+            <div class="form-group">
+                <label>Student Name</label>
+                <input type="text" id="rStudentName" placeholder="Full name" required>
+            </div>
+            <div class="form-group">
+                <label>Student ID</label>
+                <input type="text" id="rStudentId" placeholder="e.g. S001234" required>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Equipment</label>
+                <select id="rEquipment" required>
+                    <option value="">Select equipment...</option>
+                </select>
+            </div>
+            <div class="form-group" style="max-width:120px">
+                <label>Quantity</label>
+                <input type="number" id="rQuantity" min="1" value="1" required>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Rental Date</label>
+            <input type="date" id="rDate" required>
+        </div>
+        <div class="form-error" id="rentalError"></div>
+        <div class="modal-actions">
+            <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
+            <button type="submit" class="btn-primary">Confirm Rental</button>
+        </div>
+    </form>
+</div>
+
+<!-- STATUS UPDATE MODAL -->
+<div class="modal modal-sm" id="statusModal">
+    <div class="modal-header">
+        <h2 class="modal-title" id="statusModalTitle">Update Status</h2>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="form-group">
+        <label>New Status</label>
+        <select id="statusSelect"></select>
+    </div>
+    <div class="modal-actions">
+        <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
+        <button type="button" class="btn-primary" onclick="submitStatusUpdate()">Update</button>
+    </div>
+</div>
+
+<!-- TOAST NOTIFICATION -->
+<div class="toast" id="toast"></div>
+
+<script src="/js/app.js"></script>
+</body>
+</html>
