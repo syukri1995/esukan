@@ -15,7 +15,7 @@
     <artifactId>esukan</artifactId>
     <version>1.0.0</version>
     <name>E-Sukan</name>
-    <description>Campus Facility & Equipment Booking System</description>
+    <description>Campus Facility &amp; Equipment Booking System</description>
 
     <properties>
         <java.version>17</java.version>
