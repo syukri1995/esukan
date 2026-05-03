@@ -113,21 +113,23 @@
                     <div class="card-title">Today's Schedule</div>
                     <span class="badge badge-blue" id="todayCount">0 bookings</span>
                 </div>
-                <table class="table" id="todayTable">
-                    <thead>
-                        <tr>
-                            <th>Student</th>
-                            <th>ID</th>
-                            <th>Facility</th>
-                            <th>Time</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="todayTableBody">
-                        <tr><td colspan="6" class="loading-msg">Loading...</td></tr>
-                    </tbody>
-                </table>
+                <div class="table-scroll">
+                    <table class="table" id="todayTable">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>ID</th>
+                                <th>Facility</th>
+                                <th>Time</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="todayTableBody">
+                            <tr><td colspan="6" class="loading-msg">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </section>
@@ -157,23 +159,25 @@
             </div>
         </div>
         <div class="card">
-            <table class="table" id="bookingsTable">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Student</th>
-                        <th>Student ID</th>
-                        <th>Facility</th>
-                        <th>Date</th>
-                        <th>Time</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="bookingsTableBody">
-                    <tr><td colspan="8" class="loading-msg">Loading...</td></tr>
-                </tbody>
-            </table>
+            <div class="table-scroll">
+                <table class="table" id="bookingsTable">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Student</th>
+                            <th>Student ID</th>
+                            <th>Facility</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bookingsTableBody">
+                        <tr><td colspan="8" class="loading-msg">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </section>
 
@@ -188,22 +192,24 @@
             </div>
         </div>
         <div class="card">
-            <table class="table" id="equipmentTable">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Equipment</th>
-                        <th>Category</th>
-                        <th>Status</th>
-                        <th>Quantity</th>
-                        <th>Last Updated</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="equipmentTableBody">
-                    <tr><td colspan="7" class="loading-msg">Loading...</td></tr>
-                </tbody>
-            </table>
+            <div class="table-scroll">
+                <table class="table" id="equipmentTable">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Equipment</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th>Quantity</th>
+                            <th>Last Updated</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="equipmentTableBody">
+                        <tr><td colspan="7" class="loading-msg">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </section>
 
@@ -218,24 +224,26 @@
             </div>
         </div>
         <div class="card">
-            <table class="table" id="rentalsTable">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Student</th>
-                        <th>Student ID</th>
-                        <th>Equipment</th>
-                        <th>Qty</th>
-                        <th>Rental Date</th>
-                        <th>Return Date</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="rentalsTableBody">
-                    <tr><td colspan="9" class="loading-msg">Loading...</td></tr>
-                </tbody>
-            </table>
+            <div class="table-scroll">
+                <table class="table" id="rentalsTable">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Student</th>
+                            <th>Student ID</th>
+                            <th>Equipment</th>
+                            <th>Qty</th>
+                            <th>Rental Date</th>
+                            <th>Return Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rentalsTableBody">
+                        <tr><td colspan="9" class="loading-msg">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </section>
 

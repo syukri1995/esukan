@@ -119,6 +119,14 @@ cd /opt/esukan
 bash deploy.sh up
 ```
 
+For local development, use:
+```powershell
+$env:SPRING_PROFILES_ACTIVE='dev'
+mvn spring-boot:run
+```
+
+This project is pinned to Java 17 in [pom.xml](pom.xml), so make sure Java 17 is active before running Maven. The `dev` profile uses an in-memory H2 database, so it does not need MySQL credentials. Use the default profile only when you have a MySQL server and matching environment variables.
+
 Check everything is running:
 ```bash
 bash deploy.sh status
