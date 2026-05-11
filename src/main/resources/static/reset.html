@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset password — E-Sukan</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/auth.css">
+</head>
+<body class="auth-page">
+    <div class="auth-hero">
+        <div class="auth-hero-content">
+            <h1>Reset your password</h1>
+            <p>Choose a strong password you have not used elsewhere.</p>
+        </div>
+    </div>
+    <div class="auth-panel">
+        <div class="auth-card">
+            <div id="authError" class="auth-error"></div>
+            <div id="authSuccess" class="auth-success"></div>
+            <form id="formReset" class="auth-form">
+                <h2 class="visible">New password</h2>
+                <div class="form-group">
+                    <label for="newPass">New password</label>
+                    <input id="newPass" type="password" required minlength="8" autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <label for="newPass2">Confirm</label>
+                    <input id="newPass2" type="password" required minlength="8" autocomplete="new-password">
+                </div>
+                <div class="auth-actions">
+                    <button type="submit" class="btn-primary">Update password</button>
+                </div>
+                <div class="auth-footer-links">
+                    <a href="/login.html">Back to sign in</a>
+                </div>
+            </form>
+            <form id="formForgot" class="auth-form hidden">
+                <h2 class="visible">Request reset link</h2>
+                <div class="form-group">
+                    <label for="forgotEmail">Email</label>
+                    <input id="forgotEmail" type="email" required autocomplete="email">
+                </div>
+                <div class="auth-actions">
+                    <button type="submit" class="btn-primary">Send instructions</button>
+                </div>
+                <div class="auth-footer-links">
+                    <a href="/login.html">Back to sign in</a>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>window.ESUKAN_API_BASE = window.ESUKAN_API_BASE || '';</script>
+    <script src="/js/auth.js"></script>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token');
+        const errEl = document.getElementById('authError');
+        const okEl = document.getElementById('authSuccess');
+        function showErr(msg) {
+            errEl.textContent = msg;
+            errEl.classList.add('visible');
+            okEl.classList.remove('visible');
+        }
+        function showOk(msg) {
+            okEl.textContent = msg;
+            okEl.classList.add('visible');
+            errEl.classList.remove('visible');
+        }
+
+        if (!token) {
+            document.getElementById('formReset').classList.add('hidden');
+            document.getElementById('formForgot').classList.remove('hidden');
+            document.getElementById('formForgot').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('forgotEmail').value.trim();
+                const res = await authFetch('/api/auth/forgot-password', {
+                    method: 'POST',
+                    body: JSON.stringify({ email })
+                });
+                const data = await res.json().catch(() => ({}));
+                showOk(data.message || 'If an account exists, check your email.');
+            });
+        } else {
+            document.getElementById('formReset').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const p1 = document.getElementById('newPass').value;
+                const p2 = document.getElementById('newPass2').value;
+                if (p1 !== p2) {
+                    showErr('Passwords do not match');
+                    return;
+                }
+                const res = await authFetch('/api/auth/reset-password', {
+                    method: 'POST',
+                    body: JSON.stringify({ token, newPassword: p1 })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    showErr(data.error || 'Reset failed');
+                    return;
+                }
+                showOk('Password updated. Redirecting…');
+                setTimeout(() => { window.location.href = '/login.html'; }, 1500);
+            });
+        }
+    </script>
+</body>
+</html>

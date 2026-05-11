@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign in — E-Sukan</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/auth.css">
+</head>
+<body class="auth-page">
+    <div class="auth-hero">
+        <div class="auth-hero-content">
+            <h1>Campus sports, simplified.</h1>
+            <p>Book courts, borrow equipment, and join tournaments in one secure hub built for students and staff.</p>
+        </div>
+    </div>
+    <div class="auth-panel">
+        <div class="auth-card">
+            <div class="auth-tabs">
+                <button type="button" class="auth-tab active" data-tab="login">Sign in</button>
+                <button type="button" class="auth-tab" data-tab="register">Register</button>
+            </div>
+            <div id="authError" class="auth-error"></div>
+            <div id="authSuccess" class="auth-success"></div>
+
+            <form id="formLogin" class="auth-form">
+                <h2 class="visible">Welcome back</h2>
+                <div class="form-group">
+                    <label for="loginUser">Username</label>
+                    <input id="loginUser" name="username" autocomplete="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPass">Password</label>
+                    <input id="loginPass" name="password" type="password" autocomplete="current-password" required>
+                </div>
+                <div class="auth-actions">
+                    <button type="submit" class="btn-primary">Sign in</button>
+                </div>
+                <div class="auth-footer-links">
+                    <span></span>
+                    <a href="/reset.html">Forgot password?</a>
+                </div>
+            </form>
+
+            <form id="formRegister" class="auth-form hidden">
+                <h2 class="visible">Create account</h2>
+                <div class="form-group">
+                    <label for="regUser">Username</label>
+                    <input id="regUser" name="username" autocomplete="username" required minlength="3">
+                </div>
+                <div class="form-group">
+                    <label for="regEmail">Email</label>
+                    <input id="regEmail" name="email" type="email" autocomplete="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="regName">Full name</label>
+                    <input id="regName" name="fullName" required>
+                </div>
+                <div class="form-group">
+                    <label for="regStudentId">Student ID <span style="opacity:.6">(optional)</span></label>
+                    <input id="regStudentId" name="studentIdNumber" placeholder="e.g. S001234">
+                </div>
+                <div class="form-group">
+                    <span class="form-label">Account type</span>
+                    <div class="role-row" style="display:flex;flex-wrap:wrap;gap:1rem;margin-top:0.35rem">
+                        <label class="role-option" style="display:flex;align-items:center;gap:0.4rem;cursor:pointer">
+                            <input type="radio" name="regRole" value="STUDENT" checked>
+                            Student
+                        </label>
+                        <label class="role-option" style="display:flex;align-items:center;gap:0.4rem;cursor:pointer">
+                            <input type="radio" name="regRole" value="LECTURER">
+                            Instructor / Lecturer
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="regPass">Password</label>
+                    <input id="regPass" name="password" type="password" autocomplete="new-password" required minlength="8">
+                </div>
+                <div class="form-group">
+                    <label for="regPass2">Confirm password</label>
+                    <input id="regPass2" type="password" autocomplete="new-password" required minlength="8">
+                </div>
+                <div class="auth-actions">
+                    <button type="submit" class="btn-primary">Create account</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>window.ESUKAN_API_BASE = window.ESUKAN_API_BASE || '';</script>
+    <script src="/js/auth.js"></script>
+    <script>
+        const errEl = document.getElementById('authError');
+        const okEl = document.getElementById('authSuccess');
+        function showErr(msg) {
+            errEl.textContent = msg;
+            errEl.classList.add('visible');
+            okEl.classList.remove('visible');
+        }
+        function showOk(msg) {
+            okEl.textContent = msg;
+            okEl.classList.add('visible');
+            errEl.classList.remove('visible');
+        }
+        function clearMsg() {
+            errEl.classList.remove('visible');
+            okEl.classList.remove('visible');
+        }
+
+        document.querySelectorAll('.auth-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                const id = tab.dataset.tab;
+                document.getElementById('formLogin').classList.toggle('hidden', id !== 'login');
+                document.getElementById('formRegister').classList.toggle('hidden', id !== 'register');
+                clearMsg();
+            });
+        });
+
+        if (getEsukanToken()) {
+            window.location.href = '/index.html';
+        }
+
+        document.getElementById('formLogin').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            clearMsg();
+            const username = document.getElementById('loginUser').value.trim();
+            const password = document.getElementById('loginPass').value;
+            const res = await authFetch('/api/auth/login', {
+                method: 'POST',
+                body: JSON.stringify({ username, password })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                showErr(data.error || 'Login failed');
+                return;
+            }
+            setEsukanToken(data.token);
+            window.location.href = '/index.html';
+        });
+
+        document.getElementById('formRegister').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            clearMsg();
+            const p1 = document.getElementById('regPass').value;
+            const p2 = document.getElementById('regPass2').value;
+            if (p1 !== p2) {
+                showErr('Passwords do not match');
+                return;
+            }
+            const roleInput = document.querySelector('#formRegister input[name="regRole"]:checked');
+            const body = {
+                username: document.getElementById('regUser').value.trim(),
+                email: document.getElementById('regEmail').value.trim(),
+                password: p1,
+                fullName: document.getElementById('regName').value.trim(),
+                studentIdNumber: document.getElementById('regStudentId').value.trim() || null,
+                role: roleInput ? roleInput.value : 'STUDENT'
+            };
+            const res = await authFetch('/api/auth/register', { method: 'POST', body: JSON.stringify(body) });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                showErr(data.error || 'Registration failed');
+                return;
+            }
+            setEsukanToken(data.token);
+            window.location.href = '/index.html';
+        });
+    </script>
+</body>
+</html>

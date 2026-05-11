@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "echo 'static only'",
+  "buildCommand": "rm -rf public && mkdir -p public && cp -r src/main/resources/static/. public/",
+  "outputDirectory": "public",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://REPLACE_WITH_YOUR_BACKEND_HOST/api/:path*"
+    }
+  ]
+}

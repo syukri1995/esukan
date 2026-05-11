@@ -1,47 +1,74 @@
 package com.esukan.model;
 
-import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "equipment")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class Equipment {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(nullable = false, length = 100)
-    private String name;
-
-    @Column(nullable = false, length = 100)
-    private String category;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private EquipmentStatus status = EquipmentStatus.AVAILABLE;
-
-    @Column(nullable = false)
-    private Integer quantity = 1;
-
-    @Column(length = 255)
-    private String description;
-
-    @Column(name = "last_updated")
-    private LocalDateTime lastUpdated = LocalDateTime.now();
-
-    @PreUpdate
-    public void preUpdate() {
-        this.lastUpdated = LocalDateTime.now();
-    }
 
     public enum EquipmentStatus {
         AVAILABLE, DAMAGED, IN_MAINTENANCE
+    }
+
+    private Long id;
+    private String name;
+    private String category;
+    private EquipmentStatus status = EquipmentStatus.AVAILABLE;
+    private Integer quantity = 1;
+    private String description;
+    private LocalDateTime lastUpdated = LocalDateTime.now();
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
+    public EquipmentStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(EquipmentStatus status) {
+        this.status = status;
+    }
+
+    public Integer getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(Integer quantity) {
+        this.quantity = quantity;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public LocalDateTime getLastUpdated() {
+        return lastUpdated;
+    }
+
+    public void setLastUpdated(LocalDateTime lastUpdated) {
+        this.lastUpdated = lastUpdated;
     }
 }

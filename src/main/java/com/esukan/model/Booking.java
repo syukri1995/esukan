@@ -1,68 +1,121 @@
 package com.esukan.model;
 
-import jakarta.persistence.*;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 
-@Entity
-@Table(name = "bookings")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class Booking {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @NotBlank
-    @Column(name = "student_name", nullable = false, length = 100)
-    private String studentName;
-
-    @NotBlank
-    @Column(name = "student_id", nullable = false, length = 20)
-    private String studentId;
-
-    @Email
-    @NotBlank
-    @Column(name = "student_email", nullable = false, length = 100)
-    private String studentEmail;
-
-    @NotNull
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "facility_id", nullable = false)
-    private Facility facility;
-
-    @NotNull
-    @Column(name = "booking_date", nullable = false)
-    private LocalDate bookingDate;
-
-    @NotNull
-    @Column(name = "start_time", nullable = false)
-    private LocalTime startTime;
-
-    @NotNull
-    @Column(name = "end_time", nullable = false)
-    private LocalTime endTime;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private BookingStatus status = BookingStatus.PENDING;
-
-    @Column(length = 255)
-    private String notes;
-
-    @Column(name = "created_at")
-    private LocalDateTime createdAt = LocalDateTime.now();
 
     public enum BookingStatus {
         PENDING, CONFIRMED, CANCELLED
+    }
+
+    private Long id;
+    private String studentName;
+    private String studentId;
+    private String studentEmail;
+    private Facility facility;
+    private User user;
+    private LocalDate bookingDate;
+    private LocalTime startTime;
+    private LocalTime endTime;
+    private BookingStatus status = BookingStatus.PENDING;
+    private String notes;
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getStudentName() {
+        return studentName;
+    }
+
+    public void setStudentName(String studentName) {
+        this.studentName = studentName;
+    }
+
+    public String getStudentId() {
+        return studentId;
+    }
+
+    public void setStudentId(String studentId) {
+        this.studentId = studentId;
+    }
+
+    public String getStudentEmail() {
+        return studentEmail;
+    }
+
+    public void setStudentEmail(String studentEmail) {
+        this.studentEmail = studentEmail;
+    }
+
+    public Facility getFacility() {
+        return facility;
+    }
+
+    public void setFacility(Facility facility) {
+        this.facility = facility;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
+
+    public LocalDate getBookingDate() {
+        return bookingDate;
+    }
+
+    public void setBookingDate(LocalDate bookingDate) {
+        this.bookingDate = bookingDate;
+    }
+
+    public LocalTime getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(LocalTime startTime) {
+        this.startTime = startTime;
+    }
+
+    public LocalTime getEndTime() {
+        return endTime;
+    }
+
+    public void setEndTime(LocalTime endTime) {
+        this.endTime = endTime;
+    }
+
+    public BookingStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(BookingStatus status) {
+        this.status = status;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 }

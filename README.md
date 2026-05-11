@@ -1,6 +1,98 @@
 # E-Sukan — Campus Facility & Equipment Booking System
 
-A modern web application for managing campus sports facilities and equipment rentals. Built with **Spring Boot 3.2.0**, **Java 17**, and a responsive **HTML/CSS/JavaScript** dashboard.
+A modern web application for managing campus sports facilities and equipment rentals. Built with **Spring Boot 3.2.0**, **Java 17**, and a responsive **HTML/CSS/JavaScript** dashboard. The build produces an **executable WAR** (servlet-based Spring Boot app with embedded Tomcat).
+
+---
+
+## Requirements
+
+Install these before cloning or running the project:
+
+| Requirement | Version | Notes |
+|-------------|---------|--------|
+| **JDK** | **17** (LTS) | Spring Boot 3.2 targets Java 17. Newer JDKs may work but are not guaranteed; prefer Temurin or Oracle JDK 17. |
+| **Apache Maven** | **3.9+** | Must be on `PATH` as `mvn`. There is no Maven Wrapper (`mvnw`) in this repo. |
+| **MySQL** | **8.0** | **Only if you run without the `dev` profile** (default profile expects MySQL). |
+| **Docker** (optional) | Recent stable | For `docker compose` / `Dockerfile` deployment only. |
+
+Verify installations:
+
+```powershell
+java -version
+mvn -version
+```
+
+Network: first build downloads dependencies from **Maven Central** (`https://repo.maven.apache.org/maven2`). Corporate proxies or SSL inspection require a trusted CA in the JVM or a configured Maven `settings.xml` mirror.
+
+---
+
+## Installation and how to run
+
+### 1. Get the code
+
+```powershell
+git clone <your-repo-url> esukan
+cd esukan\CSC584_GroupProject
+```
+
+### 2. Install dependencies (download once)
+
+```powershell
+mvn dependency:go-offline
+```
+
+Or let the first `mvn spring-boot:run` / `mvn package` download dependencies automatically.
+
+### 3. Run locally (recommended: H2, no MySQL)
+
+Uses profile **`dev`** and **H2 in-memory** data. Sample facilities/equipment and default users are created on startup when the database is empty.
+
+**PowerShell:**
+
+```powershell
+cd CSC584_GroupProject
+$env:SPRING_PROFILES_ACTIVE='dev'
+mvn spring-boot:run
+```
+
+**If port 8080 is already in use:**
+
+```powershell
+$env:SERVER_PORT='8081'
+mvn spring-boot:run
+```
+
+Then open:
+
+- **Dashboard:** `http://localhost:8080/` (or `http://localhost:8081/` if you changed the port)
+- **Login:** `http://localhost:8080/login.html`
+- **H2 console (dev only):** `http://localhost:8080/h2-console` — JDBC URL `jdbc:h2:mem:esukan_db`, user `sa`, empty password
+
+### 4. Run with MySQL (default profile)
+
+1. Start **MySQL 8.0** and create a database (e.g. `esukan_db`), or use **Docker Compose** (see [DEPLOYMENT.md](DEPLOYMENT.md)).
+2. Copy [`.env.example`](.env.example) to **`.env`** in this project root and set `MYSQL_*` values as needed for your setup.
+3. Point Spring at MySQL via `SPRING_DATASOURCE_*` (see [Configuration](#configuration) below) or your `.env` / compose wiring.
+4. Run without forcing `dev`:
+
+```powershell
+mvn spring-boot:run
+```
+
+### 5. Build and run the packaged WAR
+
+```powershell
+mvn clean package -DskipTests
+java -jar target\esukan-1.0.0.war
+```
+
+Adjust the filename if your `pom.xml` `<version>` differs.
+
+### 6. Run tests
+
+```powershell
+mvn clean test
+```
 
 ---
 
@@ -13,6 +105,31 @@ A modern web application for managing campus sports facilities and equipment ren
 - **Admin Controls**: Approve/cancel bookings, update equipment status, manage inventory
 - **Responsive Design**: Works seamlessly on desktop, tablet, and mobile screens
 - **In-Memory Development Database**: H2 database for local testing without MySQL
+- **Authentication**: JWT login, registration, forgot/reset password; roles: **STUDENT**, **LECTURER**, **ADMIN**
+- **Tournaments**: Lecturers create events; students register teams while status is **OPEN**
+- **Vercel / TiDB**: See [DEPLOYMENT_VERCEL_TIDB.md](DEPLOYMENT_VERCEL_TIDB.md) for static frontend + hosted MySQL-compatible DB + free Java hosts
+
+### Seeded accounts (empty database only)
+
+After first startup with an empty `users` table, three accounts are created:
+
+| Username   | Password     | Role     |
+|-----------|--------------|----------|
+| `admin`   | `admin123`   | ADMIN    |
+| `lecturer`| `lecturer123`| LECTURER |
+| `student` | `student123` | STUDENT  |
+
+Change these immediately in any shared or production environment.
+
+### Auth API
+
+- `POST /api/auth/register` — Register (default role STUDENT)
+- `POST /api/auth/login` — Returns JWT; send `Authorization: Bearer <token>` on other `/api/**` calls
+- `GET /api/auth/me` — Current user
+- `POST /api/auth/forgot-password` — Request reset (email link if SMTP configured; dev profile logs link)
+- `POST /api/auth/reset-password` — `{ "token", "newPassword" }`
+
+Open **http://localhost:8080/login.html** to sign in; the dashboard is **http://localhost:8080/index.html**.
 
 ---
 
@@ -48,12 +165,14 @@ E-Sukan
 | **Build Tool** | Maven | 3.9.15+ |
 | **Production DB** | MySQL | 8.0 |
 | **Dev DB** | H2 | In-memory |
-| **Server** | Tomcat (embedded) | 10.1.16 |
+| **Server** | Tomcat (embedded servlet container) | 10.1.16 |
 | **Frontend** | HTML5 / CSS3 / Vanilla JS | ES6+ |
 
 ---
 
 ## 🚀 Quick Start
+
+The full **requirements** and **step-by-step install/run** guide is in [Requirements](#requirements) and [Installation and how to run](#installation-and-how-to-run) above. This section is a short recap.
 
 ### Prerequisites
 
@@ -141,22 +260,24 @@ src/main/
 
 ### Tables
 
+- **users** / **password_reset_tokens** — Authentication
 - **facilities** — Badminton courts, futsal courts, etc.
 - **equipment** — Rackets, shuttlecocks, balls, protective gear, etc.
-- **bookings** — Student facility reservations with status tracking
-- **equipment_rentals** — Equipment checkout/return transactions
+- **bookings** — Facility reservations (optional `user_id` FK)
+- **equipment_rentals** — Equipment checkout/return (optional `user_id` FK)
+- **tournaments** / **tournament_registrations** — Lecturer-run events and student teams
 
-See [sql/schema.sql](sql/schema.sql) for the full schema.
+Existing MySQL deployments can apply [sql/migration-auth-tournaments.sql](sql/migration-auth-tournaments.sql) (review column/constraint errors if already partially migrated).
 
 ---
 
 ## 🔌 REST API Endpoints
 
-All endpoints return JSON.
+All endpoints return JSON. **Authenticated routes** require header `Authorization: Bearer <JWT>` (obtain via `POST /api/auth/login`).
 
 ### Bookings
-- `GET /api/bookings` — List all bookings
-- `POST /api/bookings` — Create a new booking
+- `GET /api/bookings` — List bookings (admin: all; others: own)
+- `POST /api/bookings` — Create booking (student fields taken from logged-in user)
 - `PATCH /api/bookings/{id}/status?status=CONFIRMED` — Update status
 - `DELETE /api/bookings/{id}` — Delete booking
 - `GET /api/bookings/date/{date}` — Bookings on a specific date
@@ -231,9 +352,10 @@ mvn clean test
 mvn clean compile
 ```
 
-### Package as JAR
+### Package as WAR (executable)
 ```powershell
 mvn clean package
+# Run: java -jar target\esukan-1.0.0.war
 ```
 
 ### Run with Debug Mode

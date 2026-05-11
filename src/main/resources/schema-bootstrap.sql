@@ -1,36 +1,28 @@
--- E-Sukan Database Schema (MySQL 8)
-
-CREATE DATABASE IF NOT EXISTS esukan_db;
-USE esukan_db;
-
--- Facilities table (badminton courts, futsal courts, etc.)
 CREATE TABLE IF NOT EXISTS facilities (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
-    type ENUM('BADMINTON', 'FUTSAL') NOT NULL,
+    type VARCHAR(20) NOT NULL,
     description VARCHAR(255),
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Equipment table
 CREATE TABLE IF NOT EXISTS equipment (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     category VARCHAR(100) NOT NULL,
-    status ENUM('AVAILABLE', 'DAMAGED', 'IN_MAINTENANCE') DEFAULT 'AVAILABLE',
+    status VARCHAR(30) DEFAULT 'AVAILABLE',
     quantity INT DEFAULT 1,
     description VARCHAR(255),
-    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Users (auth)
 CREATE TABLE IF NOT EXISTS users (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(64) NOT NULL UNIQUE,
     email VARCHAR(120) NOT NULL UNIQUE,
     password_hash VARCHAR(120) NOT NULL,
-    role ENUM('STUDENT', 'LECTURER', 'ADMIN') NOT NULL,
+    role VARCHAR(20) NOT NULL,
     full_name VARCHAR(120) NOT NULL,
     student_id_number VARCHAR(32),
     enabled BOOLEAN DEFAULT TRUE,
@@ -46,7 +38,6 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
--- Bookings table
 CREATE TABLE IF NOT EXISTS bookings (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     student_name VARCHAR(100) NOT NULL,
@@ -57,14 +48,13 @@ CREATE TABLE IF NOT EXISTS bookings (
     booking_date DATE NOT NULL,
     start_time TIME NOT NULL,
     end_time TIME NOT NULL,
-    status ENUM('PENDING', 'CONFIRMED', 'CANCELLED') DEFAULT 'PENDING',
+    status VARCHAR(20) DEFAULT 'PENDING',
     notes VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (facility_id) REFERENCES facilities(id),
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
--- Equipment rentals table
 CREATE TABLE IF NOT EXISTS equipment_rentals (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     student_name VARCHAR(100) NOT NULL,
@@ -74,33 +64,31 @@ CREATE TABLE IF NOT EXISTS equipment_rentals (
     quantity INT DEFAULT 1,
     rental_date DATE NOT NULL,
     return_date DATE,
-    status ENUM('ACTIVE', 'RETURNED', 'OVERDUE') DEFAULT 'ACTIVE',
+    status VARCHAR(20) DEFAULT 'ACTIVE',
     deposit_amount DECIMAL(10,2) NOT NULL DEFAULT 50.00,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (equipment_id) REFERENCES equipment(id),
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
--- Payments for equipment rentals
 CREATE TABLE IF NOT EXISTS payments (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     rental_id BIGINT NOT NULL,
-    method ENUM('CASH', 'ONLINE_BANKING', 'E_WALLET', 'CARD') NOT NULL,
+    method VARCHAR(30) NOT NULL,
     amount DECIMAL(10,2) NOT NULL,
-    status ENUM('PENDING', 'PAID', 'FAILED') DEFAULT 'PENDING',
+    status VARCHAR(20) DEFAULT 'PENDING',
     paid_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (rental_id) REFERENCES equipment_rentals(id)
 );
 
--- Tournaments
 CREATE TABLE IF NOT EXISTS tournaments (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(160) NOT NULL,
     description VARCHAR(2000),
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
-    status ENUM('DRAFT', 'OPEN', 'CLOSED', 'COMPLETED') NOT NULL DEFAULT 'DRAFT',
+    status VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
     organizer_id BIGINT NOT NULL,
     venue_facility_id BIGINT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -117,28 +105,5 @@ CREATE TABLE IF NOT EXISTS tournament_registrations (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (tournament_id) REFERENCES tournaments(id),
     FOREIGN KEY (registered_by_user_id) REFERENCES users(id),
-    UNIQUE KEY uk_tournament_team (tournament_id, team_name)
+    UNIQUE (tournament_id, team_name)
 );
-
--- Seed facilities
-INSERT INTO facilities (name, type, description) VALUES
-('Badminton Court 1', 'BADMINTON', 'Main badminton court near sports complex entrance'),
-('Badminton Court 2', 'BADMINTON', 'Indoor badminton court with air conditioning'),
-('Badminton Court 3', 'BADMINTON', 'Outdoor badminton court'),
-('Futsal Court A', 'FUTSAL', 'Full-size futsal court with synthetic turf'),
-('Futsal Court B', 'FUTSAL', 'Indoor futsal court, capacity 10 players');
-
--- Seed equipment
-INSERT INTO equipment (name, category, status, quantity, description) VALUES
-('Badminton Racket', 'Racket Sports', 'AVAILABLE', 20, 'Yonex standard rackets'),
-('Shuttlecock (tube)', 'Racket Sports', 'AVAILABLE', 50, 'Feather shuttlecocks'),
-('Futsal Ball', 'Ball Sports', 'AVAILABLE', 10, 'Size 4 futsal balls'),
-('Goalkeeper Gloves', 'Protective Gear', 'AVAILABLE', 5, 'Standard goalkeeper gloves'),
-('Knee Guard', 'Protective Gear', 'IN_MAINTENANCE', 8, 'Knee protection for futsal'),
-('Bibs / Vests', 'Apparel', 'AVAILABLE', 30, 'Team differentiation bibs'),
-('Score Counter', 'Accessories', 'DAMAGED', 2, 'Manual score counters'),
-('Badminton Net', 'Court Equipment', 'AVAILABLE', 3, 'Portable badminton nets');
-
--- Migration note: on existing databases without deposit_amount or payments, run:
--- ALTER TABLE equipment_rentals ADD COLUMN deposit_amount DECIMAL(10,2) NOT NULL DEFAULT 50.00;
--- then create payments table as above.
