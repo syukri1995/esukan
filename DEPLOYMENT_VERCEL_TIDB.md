@@ -20,11 +20,13 @@ This app is split for typical free-tier hosting:
 
 ## 2. Backend API (Render free tier + Docker)
 
-**One-click (recommended):** [Deploy to Render](https://render.com/deploy?repo=https://github.com/HoboPenny/CSC584_GroupProject) — uses [render.yaml](render.yaml) (free plan, Singapore region).
+**One-click (recommended):** [Deploy to Render](https://render.com/deploy?repo=https://github.com/syukri1995/esukan) — uses [render.yaml](render.yaml) (free plan, Singapore region).
 
-Or run `.\scripts\deploy-free-backend.ps1` from this folder (opens the same link).
+Push code to your GitHub first: `.\scripts\push-to-my-github.ps1` (default repo `syukri1995/esukan`).
 
-Manual: [Render](https://render.com) → **New** → **Blueprint** → repo `HoboPenny/CSC584_GroupProject`, branch `servlet-update`.
+Or run `.\scripts\deploy-free-backend.ps1` from this folder (opens the Render deploy link).
+
+Manual: [Render](https://render.com) → **New** → **Blueprint** → repo `syukri1995/esukan`, branch `main`.
 3. Set environment variables (from your local `.env` / TiDB console):
 
 | Variable | Purpose |

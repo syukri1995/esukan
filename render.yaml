@@ -1,12 +1,12 @@
 # Render Blueprint (free tier): Java API + TiDB
-# Deploy: https://render.com/deploy?repo=https://github.com/HoboPenny/CSC584_GroupProject
+# Deploy: https://render.com/deploy?repo=https://github.com/syukri1995/esukan
 services:
   - type: web
     name: esukan-api
     runtime: docker
     plan: free
     region: singapore
-    branch: servlet-update
+    branch: main
     dockerfilePath: ./Dockerfile
     healthCheckPath: /login.html
     envVars:

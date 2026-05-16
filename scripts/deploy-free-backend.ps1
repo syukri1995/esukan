@@ -1,5 +1,6 @@
 # Free backend on Render (Docker + TiDB). Run from CSC584_GroupProject.
 $ErrorActionPreference = "Stop"
+. "$PSScriptRoot\repo-target.ps1"
 Set-Location $PSScriptRoot\..
 
 Write-Host @"
@@ -7,7 +8,7 @@ Write-Host @"
 === E-Sukan API — Render (free tier) ===
 
 1. Open the one-click Blueprint (log in to Render if asked):
-   https://render.com/deploy?repo=https://github.com/HoboPenny/CSC584_GroupProject
+   $EsukanRenderDeployUrl
 
 2. When prompted for secret env vars, use values from your .env (TiDB Cloud):
    - SPRING_DATASOURCE_URL  (use esukan_db; drop serverSslCert= Windows path)
@@ -27,4 +28,4 @@ Write-Host @"
 
 "@
 
-Start-Process "https://render.com/deploy?repo=https://github.com/HoboPenny/CSC584_GroupProject"
+Start-Process $EsukanRenderDeployUrl
