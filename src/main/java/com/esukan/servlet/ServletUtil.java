@@ -36,11 +36,6 @@ public final class ServletUtil {
         }
     }
 
-    public static void writeJsonBody(HttpServletResponse resp, Object body) throws IOException {
-        resp.setContentType("application/json");
-        resp.getWriter().write(Jsons.gson().toJson(body));
-    }
-
     public static UserPrincipal optionalAuth(HttpServletRequest req) {
         return JwtHelper.parseBearer(req.getHeader("Authorization"));
     }
