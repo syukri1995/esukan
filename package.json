@@ -1,0 +1,8 @@
+{
+  "name": "esukan-static",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/vercel-build.mjs"
+  }
+}

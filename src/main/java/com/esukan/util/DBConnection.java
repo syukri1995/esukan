@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -28,27 +29,43 @@ public final class DBConnection {
             if (dataSource != null) {
                 return;
             }
+            Map<String, String> dotenv = DotEnv.loadFromWorkingDirectory();
             Properties p = loadProperties();
+            overlayFromDotEnv(p, dotenv);
             appProperties = p;
 
             boolean useH2 = Boolean.parseBoolean(firstNonBlank(
                     System.getenv("ESUKAN_DB_USE_H2"),
+                    dotenv.get("ESUKAN_DB_USE_H2"),
                     System.getProperty("esukan.db.use-h2"),
                     p.getProperty("esukan.db.use-h2", "true")));
 
             HikariConfig cfg = new HikariConfig();
             if (useH2) {
-                cfg.setJdbcUrl(firstNonBlank(System.getenv("ESUKAN_H2_URL"), p.getProperty("esukan.db.h2.url")));
-                cfg.setUsername(firstNonBlank(System.getenv("ESUKAN_H2_USER"), p.getProperty("esukan.db.h2.user", "sa")));
-                cfg.setPassword(firstNonBlank(System.getenv("ESUKAN_H2_PASSWORD"), p.getProperty("esukan.db.h2.password", "")));
+                cfg.setJdbcUrl(firstNonBlank(System.getenv("ESUKAN_H2_URL"), dotenv.get("ESUKAN_H2_URL"),
+                        p.getProperty("esukan.db.h2.url")));
+                cfg.setUsername(firstNonBlank(System.getenv("ESUKAN_H2_USER"), dotenv.get("ESUKAN_H2_USER"),
+                        p.getProperty("esukan.db.h2.user", "sa")));
+                cfg.setPassword(firstNonBlank(System.getenv("ESUKAN_H2_PASSWORD"), dotenv.get("ESUKAN_H2_PASSWORD"),
+                        p.getProperty("esukan.db.h2.password", "")));
                 cfg.setDriverClassName("org.h2.Driver");
             } else {
-                cfg.setJdbcUrl(firstNonBlank(System.getenv("SPRING_DATASOURCE_URL"), System.getenv("ESUKAN_MYSQL_URL"),
-                        p.getProperty("esukan.db.mysql.url")));
-                cfg.setUsername(firstNonBlank(System.getenv("SPRING_DATASOURCE_USERNAME"), System.getenv("ESUKAN_MYSQL_USER"),
-                        p.getProperty("esukan.db.mysql.user", "root")));
-                cfg.setPassword(firstNonBlank(System.getenv("SPRING_DATASOURCE_PASSWORD"), System.getenv("ESUKAN_MYSQL_PASSWORD"),
-                        p.getProperty("esukan.db.mysql.password", "")));
+                String jdbcUrl = firstNonBlank(System.getenv("SPRING_DATASOURCE_URL"), dotenv.get("SPRING_DATASOURCE_URL"),
+                        System.getenv("ESUKAN_MYSQL_URL"), dotenv.get("ESUKAN_MYSQL_URL"),
+                        p.getProperty("esukan.db.mysql.url"));
+                String user = firstNonBlank(System.getenv("SPRING_DATASOURCE_USERNAME"), dotenv.get("SPRING_DATASOURCE_USERNAME"),
+                        System.getenv("ESUKAN_MYSQL_USER"), dotenv.get("ESUKAN_MYSQL_USER"),
+                        p.getProperty("esukan.db.mysql.user", "root"));
+                String password = firstNonBlank(System.getenv("SPRING_DATASOURCE_PASSWORD"), dotenv.get("SPRING_DATASOURCE_PASSWORD"),
+                        System.getenv("ESUKAN_MYSQL_PASSWORD"), dotenv.get("ESUKAN_MYSQL_PASSWORD"),
+                        p.getProperty("esukan.db.mysql.password", ""));
+                if (jdbcUrl.isBlank()) {
+                    throw new IllegalStateException(
+                            "MySQL/TiDB mode (ESUKAN_DB_USE_H2=false) requires SPRING_DATASOURCE_URL in .env or environment");
+                }
+                cfg.setJdbcUrl(jdbcUrl);
+                cfg.setUsername(user);
+                cfg.setPassword(password);
                 cfg.setDriverClassName("com.mysql.cj.jdbc.Driver");
             }
             cfg.setMaximumPoolSize(10);
@@ -73,6 +90,22 @@ public final class DBConnection {
         dataSource = null;
         if (ds != null) {
             ds.close();
+        }
+    }
+
+    private static void overlayFromDotEnv(Properties p, Map<String, String> dotenv) {
+        mapDotEnv(p, dotenv, "ESUKAN_DB_USE_H2", "esukan.db.use-h2");
+        mapDotEnv(p, dotenv, "ESUKAN_JWT_SECRET", "esukan.jwt.secret");
+        mapDotEnv(p, dotenv, "ESUKAN_JWT_EXPIRATION_MS", "esukan.jwt.expiration-ms");
+        mapDotEnv(p, dotenv, "SPRING_DATASOURCE_URL", "esukan.db.mysql.url");
+        mapDotEnv(p, dotenv, "SPRING_DATASOURCE_USERNAME", "esukan.db.mysql.user");
+        mapDotEnv(p, dotenv, "SPRING_DATASOURCE_PASSWORD", "esukan.db.mysql.password");
+    }
+
+    private static void mapDotEnv(Properties p, Map<String, String> dotenv, String envKey, String propKey) {
+        String v = dotenv.get(envKey);
+        if (v != null && !v.isBlank()) {
+            p.setProperty(propKey, v);
         }
     }
 

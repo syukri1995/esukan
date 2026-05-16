@@ -121,6 +121,11 @@
                     </httpConnector>
                     <webApp>
                         <contextPath>/</contextPath>
+                        <!-- Match maven-war-plugin: static UI lives under resources/static, not webapp/ -->
+                        <resourceBases>
+                            <resourceBase>${project.basedir}/src/main/webapp</resourceBase>
+                            <resourceBase>${project.basedir}/src/main/resources/static</resourceBase>
+                        </resourceBases>
                     </webApp>
                 </configuration>
             </plugin>

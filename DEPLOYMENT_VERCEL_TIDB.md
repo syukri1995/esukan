@@ -1,9 +1,9 @@
-# E-Sukan — Vercel frontend + TiDB + free Java host
+# E-Sukan — Vercel frontend + TiDB + Java API host
 
 This app is split for typical free-tier hosting:
 
-- **Vercel**: static UI from `src/main/resources/static` (see [vercel.json](vercel.json)).
-- **Backend**: Spring Boot JAR on [Render](https://render.com), [Fly.io](https://fly.io), [Google Cloud Run](https://cloud.google.com/run), etc.
+- **Vercel**: static UI (`npm run build` → `public/`) + Edge `middleware.js` proxies `/api/*` to your API.
+- **Backend**: Docker image ([Dockerfile](Dockerfile)) on [Render](https://render.com) (see [render.yaml](render.yaml)) or similar — **not** on Vercel (Java servlet WAR).
 - **Database**: [TiDB Cloud Serverless](https://www.pingcap.com/tidb-cloud-serverless/) (MySQL-compatible).
 
 ## 1. TiDB Cloud
@@ -18,16 +18,26 @@ This app is split for typical free-tier hosting:
 
 4. Run [sql/schema.sql](sql/schema.sql) once in the TiDB SQL editor (or use [sql/migration-auth-tournaments.sql](sql/migration-auth-tournaments.sql) on an existing MySQL volume).
 
-## 2. Backend (example env)
+## 2. Backend API (Render free tier + Docker)
 
-Set at minimum:
+**One-click (recommended):** [Deploy to Render](https://render.com/deploy?repo=https://github.com/HoboPenny/CSC584_GroupProject) — uses [render.yaml](render.yaml) (free plan, Singapore region).
+
+Or run `.\scripts\deploy-free-backend.ps1` from this folder (opens the same link).
+
+Manual: [Render](https://render.com) → **New** → **Blueprint** → repo `HoboPenny/CSC584_GroupProject`, branch `servlet-update`.
+3. Set environment variables (from your local `.env` / TiDB console):
 
 | Variable | Purpose |
 |----------|---------|
-| `PORT` | HTTP port (many hosts inject this; Spring uses `server.port=${PORT:8080}`). |
-| `SPRING_DATASOURCE_*` | TiDB JDBC credentials. |
-| `ESUKAN_JWT_SECRET` | Long random secret (≥ 32 bytes) for HS256 JWT signing. |
-| `ESUKAN_CORS_ALLOWED_ORIGINS` | Your Vercel URL, e.g. `https://your-app.vercel.app` (comma-separated). Omit rewrite on Vercel if you rely on CORS only. |
+| `ESUKAN_DB_USE_H2` | `false` |
+| `SPRING_DATASOURCE_URL` | TiDB JDBC URL (`esukan_db`, TLS; omit Windows `serverSslCert` paths — use JVM trust store). |
+| `SPRING_DATASOURCE_USERNAME` / `SPRING_DATASOURCE_PASSWORD` | TiDB credentials |
+| `ESUKAN_JWT_SECRET` | Long random secret (≥ 32 bytes) for JWT |
+
+4. Deploy and note the public URL, e.g. `https://esukan-api.onrender.com`.
+5. Smoke test: `https://esukan-api.onrender.com/login.html` and `POST .../api/auth/login`.
+
+CORS: servlets allow `*`; Vercel uses same-origin `/api` via middleware, so extra CORS config is optional.
 
 Optional email for password reset:
 
@@ -35,16 +45,32 @@ Optional email for password reset:
 |----------|---------|
 | `SPRING_MAIL_HOST`, `SPRING_MAIL_USERNAME`, `SPRING_MAIL_PASSWORD` | SMTP for forgot-password emails. |
 
-## 3. Vercel
+## 3. Vercel (static UI)
 
-1. In [vercel.json](vercel.json), replace `REPLACE_WITH_YOUR_BACKEND_HOST` in `rewrites` with your API origin **without** a trailing slash (e.g. `https://esukan-api.onrender.com`). This proxies `/api/*` through Vercel so the SPA can call same-origin `/api/...` and avoid CORS.
-2. If you **do not** use rewrites, remove the `rewrites` block and inject before `auth.js` on each HTML page:  
-   `window.ESUKAN_API_BASE = 'https://your-api.example.com';`
-3. Deploy the repository root; the build copies static assets into `public/`.
+1. [Vercel](https://vercel.com) → **Add New Project** → import Git repo.
+2. Set **Root Directory** to `CSC584_GroupProject` (if the repo root is `esukan`).
+3. Framework preset: **Other** (uses [vercel.json](vercel.json): `npm run build`, output `public/`).
+4. Environment variable:
+
+| Variable | Example |
+|----------|---------|
+| `BACKEND_URL` | `https://esukan-api.onrender.com` (no trailing slash) |
+
+`middleware.js` forwards browser calls from `/api/*` to `BACKEND_URL/api/*`. Leave `window.ESUKAN_API_BASE` empty in HTML.
+
+5. Deploy. Open `https://<your-project>.vercel.app/login.html`.
+
+CLI (from `CSC584_GroupProject`):
+
+```bash
+npx vercel@latest --prod
+```
+
+Set `BACKEND_URL` in the Vercel project settings before testing login.
 
 ## 4. Order of operations
 
-1. Apply DB schema on TiDB.
-2. Deploy backend; confirm `GET /actuator/health`.
-3. Deploy Vercel; set rewrite or `ESUKAN_API_BASE`.
+1. TiDB: database `esukan_db` + schema (app bootstrap or [sql/schema.sql](sql/schema.sql)).
+2. Deploy **backend** (Render); confirm `/login.html` and `/api/auth/login`.
+3. Deploy **Vercel** with `BACKEND_URL` pointing at the API host.
 4. Log in with seeded users (see README) or register a new student.

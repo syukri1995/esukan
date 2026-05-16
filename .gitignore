@@ -1,6 +1,13 @@
 # Secrets — never commit these
 .env
 
+# Vercel static output
+public/
+.vercel/
+
+# Local CLI tools
+.tools/
+
 # Maven build output
 target/
 *.jar
@@ -25,3 +32,4 @@ logs/
 
 # SSL certs (managed by certbot volume)
 nginx/ssl/
+.vercel

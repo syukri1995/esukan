@@ -1,0 +1,22 @@
+# Render Blueprint (free tier): Java API + TiDB
+# Deploy: https://render.com/deploy?repo=https://github.com/HoboPenny/CSC584_GroupProject
+services:
+  - type: web
+    name: esukan-api
+    runtime: docker
+    plan: free
+    region: singapore
+    branch: servlet-update
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /login.html
+    envVars:
+      - key: ESUKAN_DB_USE_H2
+        value: "false"
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: ESUKAN_JWT_SECRET
+        generateValue: true
