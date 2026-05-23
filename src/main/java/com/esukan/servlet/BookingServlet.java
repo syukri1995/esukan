@@ -125,7 +125,8 @@ public class BookingServlet extends BaseHttpServlet {
             Facility facility = loadFacility(conn, facilityId)
                     .orElseThrow(() -> new RuntimeException("Facility not found"));
             booking.setFacility(facility);
-            if (!conflicts(conn, facilityId, booking.getBookingDate(), booking.getStartTime(), booking.getEndTime()).isEmpty()) {
+            if (BookingSlotHelper.hasConflict(conn, facilityId, booking.getBookingDate(), booking.getStartTime(),
+                    booking.getEndTime())) {
                 throw new RuntimeException("Time slot conflict: This facility is already booked for the selected time.");
             }
             String sql = """
@@ -182,6 +183,7 @@ public class BookingServlet extends BaseHttpServlet {
                 return;
             }
             Booking.BookingStatus st = Booking.BookingStatus.valueOf(statusStr);
+            Optional<Booking> before = findById(conn, id);
             try (PreparedStatement ps = conn.prepareStatement("UPDATE bookings SET status = ? WHERE id = ?")) {
                 ps.setString(1, st.name());
                 ps.setLong(2, id);
@@ -189,6 +191,9 @@ public class BookingServlet extends BaseHttpServlet {
                     ServletUtil.writeJson(resp, HttpServletResponse.SC_NOT_FOUND, Map.of());
                     return;
                 }
+            }
+            if (st == Booking.BookingStatus.CANCELLED && before.isPresent()) {
+                BookingSlotHelper.onSlotFreed(conn, before.get());
             }
             Optional<Booking> updated = findById(conn, id);
             if (updated.isPresent()) {
@@ -226,10 +231,12 @@ public class BookingServlet extends BaseHttpServlet {
                 ServletUtil.writeJson(resp, HttpServletResponse.SC_FORBIDDEN, Map.of());
                 return;
             }
+            Booking cancelled = b.get();
             try (PreparedStatement ps = conn.prepareStatement("DELETE FROM bookings WHERE id = ?")) {
                 ps.setLong(1, id);
                 ps.executeUpdate();
             }
+            BookingSlotHelper.onSlotFreed(conn, cancelled);
             resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
         } catch (Exception e) {
             ServletUtil.writeJson(resp, HttpServletResponse.SC_BAD_REQUEST, Map.of("error", e.getMessage()));
@@ -323,7 +330,7 @@ public class BookingServlet extends BaseHttpServlet {
         return out;
     }
 
-    private static Optional<Booking> findById(Connection conn, long id) throws java.sql.SQLException {
+    static Optional<Booking> findById(Connection conn, long id) throws java.sql.SQLException {
         String sql = BOOKING_JOIN + " WHERE b.id = ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setLong(1, id);
@@ -344,36 +351,6 @@ public class BookingServlet extends BaseHttpServlet {
             return true;
         }
         return p.getStudentIdNumber() != null && p.getStudentIdNumber().equals(b.getStudentId());
-    }
-
-    private static List<Booking> conflicts(Connection conn, long facilityId, LocalDate date, LocalTime start, LocalTime end)
-            throws java.sql.SQLException {
-        String sql = """
-                SELECT b.id as br_id, b.student_name as br_student_name, b.student_id as br_student_id,
-                b.student_email as br_student_email, b.booking_date as br_booking_date,
-                b.start_time as br_start_time, b.end_time as br_end_time, b.status as br_status,
-                b.notes as br_notes, b.created_at as br_created_at, b.user_id as br_user_id,
-                f.id as f_id, f.name as f_name, f.type as f_type, f.description as f_description,
-                f.is_active as f_is_active, f.created_at as f_created_at
-                FROM bookings b JOIN facilities f ON b.facility_id = f.id
-                WHERE b.facility_id = ? AND b.booking_date = ? AND b.status <> 'CANCELLED'
-                AND ((b.start_time <= ? AND b.end_time > ?)
-                OR (b.start_time < ? AND b.end_time >= ?)
-                OR (b.start_time >= ? AND b.end_time <= ?))
-                """;
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setLong(1, facilityId);
-            ps.setObject(2, date);
-            ps.setObject(3, start);
-            ps.setObject(4, start);
-            ps.setObject(5, end);
-            ps.setObject(6, end);
-            ps.setObject(7, start);
-            ps.setObject(8, end);
-            try (ResultSet rs = ps.executeQuery()) {
-                return readBookings(rs);
-            }
-        }
     }
 
     private static Map<String, Object> dashboardStats(Connection conn, UserPrincipal p) throws java.sql.SQLException {

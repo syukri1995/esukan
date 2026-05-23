@@ -159,6 +159,30 @@
 
     <!-- BOOKINGS PAGE -->
     <section class="page" id="page-bookings">
+        <div class="card" style="margin-bottom:20px">
+            <div class="card-header-row">
+                <h3 class="card-title">Facility waitlist</h3>
+                <span class="stat-sub" id="waitlistCount">—</span>
+            </div>
+            <div class="table-scroll">
+                <table class="table" id="waitlistTable">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Facility</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Queue</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="waitlistTableBody">
+                        <tr><td colspan="7" class="loading-msg">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
         <div class="page-toolbar">
             <div class="filter-group">
                 <button class="filter-btn active" onclick="filterBookings(this, 'ALL')">All</button>
@@ -374,6 +398,7 @@
         <div class="form-error" id="bookingError"></div>
         <div class="modal-actions">
             <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
+            <button type="button" class="btn-secondary" id="joinWaitlistBtn" style="display:none" onclick="joinWaitlistFromForm()">Join waitlist</button>
             <button type="submit" class="btn-primary">Submit Booking</button>
         </div>
     </form>

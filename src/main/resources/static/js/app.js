@@ -162,6 +162,7 @@ function navigateTo(page) {
             break;
         case 'bookings':
             loadBookings();
+            loadWaitlist();
             break;
         case 'equipment':
             loadEquipment();
@@ -360,6 +361,97 @@ function filterFacilities(btn, type) {
 // =============================================
 // BOOKINGS
 // =============================================
+async function loadWaitlist() {
+    const tbody = document.getElementById('waitlistTableBody');
+    const countEl = document.getElementById('waitlistCount');
+    if (!tbody) {
+        return;
+    }
+    try {
+        const list = await authFetch('/api/waitlist').then(r => r.json());
+        const rows = Array.isArray(list) ? list : [];
+        countEl.textContent = `${rows.length} entr${rows.length === 1 ? 'y' : 'ies'}`;
+        if (rows.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="loading-msg">No waitlist entries</td></tr>';
+            return;
+        }
+        tbody.innerHTML = rows.map(w => `
+            <tr>
+                <td>${w.id}</td>
+                <td>${w.facility?.name ?? '—'}</td>
+                <td>${w.bookingDate}</td>
+                <td>${formatTime(w.startTime)} – ${formatTime(w.endTime)}</td>
+                <td>${w.status === 'WAITING' ? '#' + (w.queuePosition ?? '—') : '—'}</td>
+                <td>${statusBadge(w.status)}</td>
+                <td class="actions-cell">
+                    ${w.status === 'WAITING' ? `<button class="btn-icon btn-cancel" onclick="leaveWaitlist(${w.id})" title="Leave waitlist">✕</button>` : ''}
+                    ${w.promotedBookingId ? `<span class="stat-sub">Booking #${w.promotedBookingId}</span>` : ''}
+                </td>
+            </tr>
+        `).join('');
+    } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="7" class="loading-msg">Failed to load waitlist</td></tr>';
+        countEl.textContent = '—';
+    }
+}
+
+async function leaveWaitlist(id) {
+    if (!confirm('Leave this waitlist?')) {
+        return;
+    }
+    try {
+        const res = await authFetch(`/api/waitlist/${id}`, { method: 'DELETE' });
+        if (!res.ok && res.status !== 204) {
+            const data = await res.json().catch(() => ({}));
+            showToast(data.error || 'Could not leave waitlist', true);
+            return;
+        }
+        showToast('Removed from waitlist');
+        await loadWaitlist();
+    } catch (err) {
+        showToast('Action failed', true);
+    }
+}
+
+function bookingFormPayload() {
+    const start = document.getElementById('bStartTime').value;
+    const end = document.getElementById('bEndTime').value;
+    return {
+        facilityId: document.getElementById('bFacility').value,
+        bookingDate: document.getElementById('bDate').value,
+        startTime: start.length === 5 ? `${start}:00` : start,
+        endTime: end.length === 5 ? `${end}:00` : end,
+        notes: document.getElementById('bNotes').value
+    };
+}
+
+async function joinWaitlistFromForm() {
+    const errEl = document.getElementById('bookingError');
+    const joinBtn = document.getElementById('joinWaitlistBtn');
+    errEl.classList.remove('visible');
+    try {
+        const res = await authFetch('/api/waitlist', {
+            method: 'POST',
+            body: JSON.stringify(bookingFormPayload())
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            errEl.textContent = data.error || 'Could not join waitlist';
+            errEl.classList.add('visible');
+            return;
+        }
+        showToast(`Joined waitlist (#${data.queuePosition ?? '?'})`);
+        if (joinBtn) {
+            joinBtn.style.display = 'none';
+        }
+        closeModal();
+        await loadWaitlist();
+    } catch (err) {
+        errEl.textContent = 'Network error. Please try again.';
+        errEl.classList.add('visible');
+    }
+}
+
 async function loadBookings() {
     const tbody = document.getElementById('bookingsTableBody');
     tbody.innerHTML = '<tr><td colspan="8" class="loading-msg">Loading...</td></tr>';
@@ -769,6 +861,10 @@ async function openBookingModal() {
     }
 
     document.getElementById('bookingError').classList.remove('visible');
+    const joinBtn = document.getElementById('joinWaitlistBtn');
+    if (joinBtn) {
+        joinBtn.style.display = 'none';
+    }
     document.getElementById('bookingForm').reset();
     setDefaultDates();
     openModal('bookingModal');
@@ -822,6 +918,7 @@ async function submitStatusUpdate() {
         if (type === 'booking') {
             await authFetch(`/api/bookings/${id}/status?status=${status}`, { method: 'PATCH' });
             await loadBookings();
+            await loadWaitlist();
             showToast('Booking status updated');
         } else if (type === 'equipment') {
             await authFetch(`/api/equipment/${id}/status?status=${status}`, { method: 'PATCH' });
@@ -843,6 +940,7 @@ async function quickStatus(id, status, type) {
         showToast(`Booking ${status.toLowerCase()}`);
         if (type === 'bookings') {
             await loadBookings();
+            await loadWaitlist();
         }
         await loadDashboard();
     } catch (err) {
@@ -869,6 +967,7 @@ async function deleteRecord(resource, id) {
         showToast('Record deleted');
         if (resource === 'bookings') {
             await loadBookings();
+            await loadWaitlist();
         } else if (resource === 'equipment') {
             await loadEquipment();
         } else if (resource === 'rentals') {
@@ -885,15 +984,13 @@ async function deleteRecord(resource, id) {
 async function submitBooking(e) {
     e.preventDefault();
     const errEl = document.getElementById('bookingError');
+    const joinBtn = document.getElementById('joinWaitlistBtn');
     errEl.classList.remove('visible');
+    if (joinBtn) {
+        joinBtn.style.display = 'none';
+    }
 
-    const payload = {
-        facilityId: document.getElementById('bFacility').value,
-        bookingDate: document.getElementById('bDate').value,
-        startTime: document.getElementById('bStartTime').value,
-        endTime: document.getElementById('bEndTime').value,
-        notes: document.getElementById('bNotes').value
-    };
+    const payload = bookingFormPayload();
 
     try {
         const res = await authFetch('/api/bookings', {
@@ -902,13 +999,18 @@ async function submitBooking(e) {
         });
         const data = await res.json();
         if (!res.ok) {
-            errEl.textContent = data.error ?? 'Booking failed';
+            const msg = data.error ?? 'Booking failed';
+            errEl.textContent = msg;
             errEl.classList.add('visible');
+            if (joinBtn && msg.toLowerCase().includes('conflict')) {
+                joinBtn.style.display = 'inline-flex';
+            }
             return;
         }
         showToast('Booking created successfully!');
         closeModal();
         await loadBookings();
+        await loadWaitlist();
         await loadDashboard();
     } catch (err) {
         errEl.textContent = 'Network error. Please try again.';
@@ -965,7 +1067,9 @@ function statusBadge(status) {
     const map = {
         PENDING: 'badge-orange',
         CONFIRMED: 'badge-green',
-        CANCELLED: 'badge-gray'
+        CANCELLED: 'badge-gray',
+        WAITING: 'badge-orange',
+        PROMOTED: 'badge-green'
     };
     return `<span class="badge ${map[status] ?? 'badge-gray'}">${status}</span>`;
 }

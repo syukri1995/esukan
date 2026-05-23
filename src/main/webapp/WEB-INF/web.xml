@@ -103,6 +103,19 @@
     </servlet-mapping>
 
     <servlet>
+        <servlet-name>WaitlistServlet</servlet-name>
+        <servlet-class>com.esukan.servlet.WaitlistServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>WaitlistServlet</servlet-name>
+        <url-pattern>/api/waitlist</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>WaitlistServlet</servlet-name>
+        <url-pattern>/api/waitlist/*</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
         <servlet-name>AdminUserServlet</servlet-name>
         <servlet-class>com.esukan.servlet.AdminUserServlet</servlet-class>
     </servlet>

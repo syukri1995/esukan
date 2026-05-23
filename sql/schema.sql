@@ -64,6 +64,25 @@ CREATE TABLE IF NOT EXISTS bookings (
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
+-- Facility booking waitlist (FIFO promotion on cancel)
+CREATE TABLE IF NOT EXISTS booking_waitlist (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    student_name VARCHAR(100) NOT NULL,
+    student_id VARCHAR(20) NOT NULL,
+    student_email VARCHAR(100) NOT NULL,
+    facility_id BIGINT NOT NULL,
+    user_id BIGINT NULL,
+    booking_date DATE NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    status ENUM('WAITING', 'PROMOTED', 'CANCELLED') DEFAULT 'WAITING',
+    notes VARCHAR(255),
+    promoted_booking_id BIGINT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (facility_id) REFERENCES facilities(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
 -- Equipment rentals table
 CREATE TABLE IF NOT EXISTS equipment_rentals (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
