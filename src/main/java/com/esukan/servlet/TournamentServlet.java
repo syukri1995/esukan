@@ -100,7 +100,8 @@ public class TournamentServlet extends BaseHttpServlet {
                 Tournament.TournamentStatus st = body.get("status") != null
                         ? Tournament.TournamentStatus.valueOf(body.get("status").toString())
                         : Tournament.TournamentStatus.DRAFT;
-                Long venueId = body.get("venueFacilityId") != null ? Long.parseLong(body.get("venueFacilityId").toString()) : null;
+                Long venueId = body.get("venueFacilityId") != null
+                        ? ServletUtil.parseLongValue(body.get("venueFacilityId")) : null;
                 long id = insertTournament(conn, full.getId(), String.valueOf(body.get("title")),
                         body.get("description") != null ? String.valueOf(body.get("description")) : null,
                         LocalDate.parse(String.valueOf(body.get("startDate"))),
@@ -172,7 +173,7 @@ public class TournamentServlet extends BaseHttpServlet {
             LocalDate sd = body.get("startDate") != null ? LocalDate.parse(String.valueOf(body.get("startDate"))) : t.getStartDate();
             LocalDate ed = body.get("endDate") != null ? LocalDate.parse(String.valueOf(body.get("endDate"))) : t.getEndDate();
             Long venueId = body.containsKey("venueFacilityId")
-                    ? (body.get("venueFacilityId") == null ? null : Long.parseLong(body.get("venueFacilityId").toString()))
+                    ? (body.get("venueFacilityId") == null ? null : ServletUtil.parseLongValue(body.get("venueFacilityId")))
                     : (t.getVenueFacility() != null ? t.getVenueFacility().getId() : null);
             Tournament.TournamentStatus st = body.get("status") != null
                     ? Tournament.TournamentStatus.valueOf(body.get("status").toString())

@@ -121,7 +121,7 @@ public class BookingServlet extends BaseHttpServlet {
             booking.setBookingDate(LocalDate.parse(String.valueOf(payload.get("bookingDate"))));
             booking.setStartTime(LocalTime.parse(String.valueOf(payload.get("startTime"))));
             booking.setEndTime(LocalTime.parse(String.valueOf(payload.get("endTime"))));
-            long facilityId = Long.parseLong(payload.get("facilityId").toString());
+            long facilityId = ServletUtil.parseLongValue(payload.get("facilityId"));
             Facility facility = loadFacility(conn, facilityId)
                     .orElseThrow(() -> new RuntimeException("Facility not found"));
             booking.setFacility(facility);

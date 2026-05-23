@@ -68,9 +68,9 @@ public class RentalServlet extends BaseHttpServlet {
         Map<String, Object> payload = com.esukan.util.Jsons.gson().fromJson(ServletUtil.readBody(req), mapType);
         try (Connection conn = DBConnection.getConnection()) {
             User u = UserQueries.loadUser(conn, auth.getId());
-            int qty = Integer.parseInt(payload.get("quantity").toString());
+            int qty = ServletUtil.parseIntValue(payload.get("quantity"));
             LocalDate rentalDate = LocalDate.parse(String.valueOf(payload.get("rentalDate")));
-            long equipmentId = Long.parseLong(payload.get("equipmentId").toString());
+            long equipmentId = ServletUtil.parseLongValue(payload.get("equipmentId"));
             Equipment equipment = loadEquipment(conn, equipmentId)
                     .orElseThrow(() -> new RuntimeException("Equipment not found"));
 

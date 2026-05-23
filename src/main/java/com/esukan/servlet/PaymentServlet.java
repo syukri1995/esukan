@@ -72,7 +72,7 @@ public class PaymentServlet extends BaseHttpServlet {
         Map<String, Object> body = com.esukan.util.Jsons.gson().fromJson(ServletUtil.readBody(req), mapType);
         try (Connection conn = DBConnection.getConnection()) {
             UserPrincipal full = JwtHelper.enrich(auth, UserQueries.loadUser(conn, auth.getId()));
-            long rentalId = Long.parseLong(body.get("rentalId").toString());
+            long rentalId = ServletUtil.parseLongValue(body.get("rentalId"));
             Payment.PaymentMethod method = Payment.PaymentMethod.valueOf(String.valueOf(body.get("method")).trim());
             Optional<EquipmentRental> rental = RentalQueries.findById(conn, rentalId);
             if (rental.isEmpty() || !RentalQueries.canAccess(rental.get(), full)) {

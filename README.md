@@ -121,6 +121,8 @@ After first startup with an empty `users` table, three accounts are created:
 
 Change these immediately in any shared or production environment.
 
+**Smoke automation** (also created if missing on startup): `smoke_student` / `smoke123`, `smoke_admin` / `smoke123`. Use for `scripts/smoke-prod.ps1` only; use `student` / `admin` for live demos. See [DEPLOYMENT_VERCEL_TIDB.md](DEPLOYMENT_VERCEL_TIDB.md#5-production-smoke-tests).
+
 ### Auth API
 
 - `POST /api/auth/register` — Register (default role STUDENT)

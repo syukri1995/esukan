@@ -76,3 +76,46 @@ Set `BACKEND_URL` in the Vercel project settings before testing login.
 2. Deploy **backend** (Render); confirm `/login.html` and `/api/auth/login`.
 3. Deploy **Vercel** with `BACKEND_URL` pointing at the API host.
 4. Log in with seeded users (see README) or register a new student.
+
+## 5. Production smoke tests
+
+Dedicated automation accounts (created on startup if missing):
+
+| Username | Password | Role |
+|----------|----------|------|
+| `smoke_student` | `smoke123` | STUDENT |
+| `smoke_admin` | `smoke123` | ADMIN |
+
+Human demo / report should still use `student` / `admin` (see README).
+
+### TiDB access
+
+In TiDB Cloud, allow **public** / `0.0.0.0/0` (or equivalent) so Render egress can connect. Use the JDBC URL with TLS from the TiDB console (no Windows-only cert paths on Render).
+
+### Two-tier script
+
+From `CSC584_GroupProject`, set URLs in `.env` (copy from `.env.example`) or export:
+
+- `SMOKE_RENDER_URL` — Render API (no trailing slash)
+- `SMOKE_VERCEL_URL` — Vercel app URL
+
+```powershell
+.\scripts\smoke-prod.ps1           # tier 1 (Render) + tier 2 (Vercel)
+.\scripts\smoke-prod.ps1 -Tier tier1
+.\scripts\smoke-prod.ps1 -Tier tier2
+```
+
+| Tier | Target | Checks |
+|------|--------|--------|
+| **1** | Render | `GET /login.html`, login, `GET /api/facilities`, `GET /api/equipment/health-report` |
+| **2** | Vercel | Login → book → rent → admin approve → `GET /api/bookings/dashboard` |
+
+### GitHub Actions (optional)
+
+Workflow **Smoke production** (`workflow_dispatch`) in `.github/workflows/smoke-prod.yml`. Add repository **Secrets**: `SMOKE_RENDER_URL`, `SMOKE_VERCEL_URL`, and optionally override `SMOKE_*_USER` / `SMOKE_*_PASSWORD`.
+
+### Before live demo
+
+1. Run tier 1 + tier 2 green on production URLs.
+2. Warm up Vercel login **10–15 minutes** before presenting (Render free tier cold start).
+3. Record a **backup video** of demo script B on the Vercel URL for submission.

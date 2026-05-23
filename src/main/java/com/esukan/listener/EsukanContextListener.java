@@ -3,6 +3,7 @@ package com.esukan.listener;
 import at.favre.lib.crypto.bcrypt.BCrypt;
 import com.esukan.model.User;
 import com.esukan.model.UserRole;
+import com.esukan.servlet.UserQueries;
 import com.esukan.util.DBConnection;
 
 import jakarta.servlet.ServletContextEvent;
@@ -26,6 +27,7 @@ public class EsukanContextListener implements ServletContextListener {
             try (Connection conn = DBConnection.getConnection()) {
                 runBootstrapSql(conn);
                 seedIfEmpty(conn);
+                ensureSmokeUsers(conn);
             }
         } catch (Exception e) {
             throw new IllegalStateException("Failed to initialize database", e);
@@ -88,6 +90,21 @@ public class EsukanContextListener implements ServletContextListener {
         insertUser(conn, user("admin", "admin@esukan.local", "admin123", "System Admin", null, UserRole.ADMIN));
         insertUser(conn, user("lecturer", "lecturer@esukan.local", "lecturer123", "Dr. Sports", "L001", UserRole.LECTURER));
         insertUser(conn, user("student", "student@esukan.local", "student123", "Ali Student", "S001234", UserRole.STUDENT));
+    }
+
+    /** Dedicated automation accounts; created on any deploy if missing (see scripts/smoke-prod.ps1). */
+    private static void ensureSmokeUsers(Connection conn) throws java.sql.SQLException {
+        ensureUser(conn, user("smoke_student", "smoke_student@esukan.local", "smoke123",
+                "Smoke Test Student", "SMOKE001", UserRole.STUDENT));
+        ensureUser(conn, user("smoke_admin", "smoke_admin@esukan.local", "smoke123",
+                "Smoke Test Admin", null, UserRole.ADMIN));
+    }
+
+    private static void ensureUser(Connection conn, User u) throws java.sql.SQLException {
+        if (UserQueries.loadUserByUsername(conn, u.getUsername()) != null) {
+            return;
+        }
+        insertUser(conn, u);
     }
 
     private static User user(String username, String email, String raw, String fullName, String sid, UserRole role) {

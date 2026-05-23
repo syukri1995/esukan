@@ -1,0 +1,35 @@
+# Manual production smoke (Render + Vercel). Configure repository Secrets first.
+name: Smoke production
+
+on:
+  workflow_dispatch:
+    inputs:
+      tier:
+        description: Which tier to run
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - tier1
+          - tier2
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run smoke-prod.ps1
+        shell: pwsh
+        env:
+          SMOKE_RENDER_URL: ${{ secrets.SMOKE_RENDER_URL }}
+          SMOKE_VERCEL_URL: ${{ secrets.SMOKE_VERCEL_URL }}
+          SMOKE_STUDENT_USER: ${{ secrets.SMOKE_STUDENT_USER }}
+          SMOKE_STUDENT_PASSWORD: ${{ secrets.SMOKE_STUDENT_PASSWORD }}
+          SMOKE_ADMIN_USER: ${{ secrets.SMOKE_ADMIN_USER }}
+          SMOKE_ADMIN_PASSWORD: ${{ secrets.SMOKE_ADMIN_PASSWORD }}
+        run: |
+          $root = if (Test-Path 'CSC584_GroupProject/scripts/smoke-prod.ps1') { 'CSC584_GroupProject' } else { '.' }
+          Set-Location $root
+          ./scripts/smoke-prod.ps1 -Tier ${{ inputs.tier }}

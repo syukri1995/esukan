@@ -48,4 +48,33 @@ public final class ServletUtil {
         }
         return p;
     }
+
+    /** Parses IDs from JSON object maps (Gson may use {@link Double} for whole numbers). */
+    public static long parseLongValue(Object value) {
+        if (value == null) {
+            throw new IllegalArgumentException("missing value");
+        }
+        if (value instanceof Number n) {
+            return n.longValue();
+        }
+        String s = value.toString().trim();
+        if (s.contains(".")) {
+            return (long) Double.parseDouble(s);
+        }
+        return Long.parseLong(s);
+    }
+
+    public static int parseIntValue(Object value) {
+        if (value == null) {
+            throw new IllegalArgumentException("missing value");
+        }
+        if (value instanceof Number n) {
+            return n.intValue();
+        }
+        String s = value.toString().trim();
+        if (s.contains(".")) {
+            return (int) Double.parseDouble(s);
+        }
+        return Integer.parseInt(s);
+    }
 }
