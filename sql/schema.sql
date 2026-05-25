@@ -3,6 +3,15 @@
 CREATE DATABASE IF NOT EXISTS esukan_db;
 USE esukan_db;
 
+CREATE TABLE IF NOT EXISTS system_settings (
+    setting_key VARCHAR(64) PRIMARY KEY,
+    setting_value VARCHAR(255) NOT NULL
+);
+
+INSERT IGNORE INTO system_settings (setting_key, setting_value) VALUES
+('default_open_time', '08:00'),
+('default_close_time', '22:00');
+
 -- Facilities table (badminton courts, futsal courts, etc.)
 CREATE TABLE IF NOT EXISTS facilities (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -10,6 +19,9 @@ CREATE TABLE IF NOT EXISTS facilities (
     type ENUM('BADMINTON', 'FUTSAL') NOT NULL,
     description VARCHAR(255),
     is_active BOOLEAN DEFAULT TRUE,
+    open_time TIME NULL,
+    close_time TIME NULL,
+    cost_per_hour DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -21,7 +33,16 @@ CREATE TABLE IF NOT EXISTS equipment (
     status ENUM('AVAILABLE', 'DAMAGED', 'IN_MAINTENANCE') DEFAULT 'AVAILABLE',
     quantity INT DEFAULT 1,
     description VARCHAR(255),
+    cost_per_hour DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS facility_equipment (
+    facility_id BIGINT NOT NULL,
+    equipment_id BIGINT NOT NULL,
+    PRIMARY KEY (facility_id, equipment_id),
+    FOREIGN KEY (facility_id) REFERENCES facilities(id) ON DELETE CASCADE,
+    FOREIGN KEY (equipment_id) REFERENCES equipment(id) ON DELETE CASCADE
 );
 
 -- Users (auth)
@@ -59,6 +80,7 @@ CREATE TABLE IF NOT EXISTS bookings (
     end_time TIME NOT NULL,
     status ENUM('PENDING', 'CONFIRMED', 'CANCELLED') DEFAULT 'PENDING',
     notes VARCHAR(255),
+    estimated_cost DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (facility_id) REFERENCES facilities(id),
     FOREIGN KEY (user_id) REFERENCES users(id)
@@ -103,13 +125,15 @@ CREATE TABLE IF NOT EXISTS equipment_rentals (
 -- Payments for equipment rentals
 CREATE TABLE IF NOT EXISTS payments (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    rental_id BIGINT NOT NULL,
+    rental_id BIGINT NULL,
+    booking_id BIGINT NULL,
     method ENUM('CASH', 'ONLINE_BANKING', 'E_WALLET', 'CARD') NOT NULL,
     amount DECIMAL(10,2) NOT NULL,
     status ENUM('PENDING', 'PAID', 'FAILED') DEFAULT 'PENDING',
     paid_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (rental_id) REFERENCES equipment_rentals(id)
+    FOREIGN KEY (rental_id) REFERENCES equipment_rentals(id),
+    FOREIGN KEY (booking_id) REFERENCES bookings(id)
 );
 
 -- Tournaments
@@ -120,6 +144,7 @@ CREATE TABLE IF NOT EXISTS tournaments (
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
     status ENUM('DRAFT', 'OPEN', 'CLOSED', 'COMPLETED') NOT NULL DEFAULT 'DRAFT',
+    format ENUM('SINGLE_ELIMINATION', 'ROUND_ROBIN') NOT NULL DEFAULT 'SINGLE_ELIMINATION',
     organizer_id BIGINT NOT NULL,
     venue_facility_id BIGINT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -137,6 +162,35 @@ CREATE TABLE IF NOT EXISTS tournament_registrations (
     FOREIGN KEY (tournament_id) REFERENCES tournaments(id),
     FOREIGN KEY (registered_by_user_id) REFERENCES users(id),
     UNIQUE KEY uk_tournament_team (tournament_id, team_name)
+);
+
+CREATE TABLE IF NOT EXISTS tournament_team_members (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    registration_id BIGINT NOT NULL,
+    display_name VARCHAR(120) NOT NULL,
+    email VARCHAR(120),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (registration_id) REFERENCES tournament_registrations(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS tournament_matches (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    tournament_id BIGINT NOT NULL,
+    round_number INT NOT NULL,
+    match_index INT NOT NULL,
+    slot_label VARCHAR(32),
+    team_a_registration_id BIGINT NULL,
+    team_b_registration_id BIGINT NULL,
+    winner_registration_id BIGINT NULL,
+    status ENUM('SCHEDULED', 'COMPLETED') NOT NULL DEFAULT 'SCHEDULED',
+    next_match_id BIGINT NULL,
+    next_match_slot CHAR(1) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
+    FOREIGN KEY (team_a_registration_id) REFERENCES tournament_registrations(id),
+    FOREIGN KEY (team_b_registration_id) REFERENCES tournament_registrations(id),
+    FOREIGN KEY (winner_registration_id) REFERENCES tournament_registrations(id),
+    FOREIGN KEY (next_match_id) REFERENCES tournament_matches(id)
 );
 
 -- Seed facilities

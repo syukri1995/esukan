@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/payment-gateway.css">
 </head>
 <body>
 
@@ -436,33 +437,120 @@
     </form>
 </div>
 
-<!-- PAYMENT MODAL -->
-<div class="modal" id="paymentModal">
-    <div class="modal-header">
-        <h2 class="modal-title">Pay deposit</h2>
-        <button class="modal-close" onclick="closeModal()">✕</button>
+<!-- PAYMENT MODAL (Mock Gateway) -->
+<div class="modal modal-gateway" id="paymentModal">
+    <div class="gateway-header">
+        <div class="gateway-brand">
+            <span class="gateway-lock">&#128274;</span>
+            <div>
+                <div class="gateway-title">E-Sukan SecurePay</div>
+                <div class="gateway-sub">Demo payment gateway</div>
+            </div>
+        </div>
+        <span class="gateway-demo-badge">DEMO</span>
+        <button class="modal-close" onclick="closePaymentGateway()" type="button">&#10005;</button>
     </div>
-    <form id="paymentForm">
-        <input type="hidden" id="payRentalId">
-        <div class="form-group">
-            <label>Payment method</label>
-            <select id="payMethod" required>
-                <option value="CASH">Cash</option>
-                <option value="ONLINE_BANKING">Online Banking</option>
-                <option value="E_WALLET">E-Wallet</option>
-                <option value="CARD">Card</option>
-            </select>
+    <input type="hidden" id="payRentalId">
+    <div class="gateway-step active" id="gatewayStep1">
+        <p class="gateway-step-label">Order summary</p>
+        <div class="gateway-summary">
+            <div class="gateway-summary-row"><span>Merchant</span><strong>E-Sukan Campus Sports Hub</strong></div>
+            <div class="gateway-summary-row"><span>Rental ref</span><strong id="paySummaryRef">-</strong></div>
+            <div class="gateway-summary-row"><span>Student</span><strong id="paySummaryStudent">-</strong></div>
+            <div class="gateway-summary-row gateway-summary-total"><span>Deposit amount</span><strong id="paySummaryAmount">RM 0.00</strong></div>
         </div>
-        <div class="form-group">
-            <label>Amount (deposit)</label>
-            <input type="text" id="payAmount" readonly>
-        </div>
-        <div class="form-error" id="paymentError"></div>
         <div class="modal-actions">
-            <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
-            <button type="submit" class="btn-primary">Confirm payment</button>
+            <button type="button" class="btn-secondary" onclick="closePaymentGateway()">Cancel</button>
+            <button type="button" class="btn-primary" onclick="showGatewayStep(2)">Continue to payment</button>
         </div>
-    </form>
+    </div>
+    <div class="gateway-step" id="gatewayStep2">
+        <p class="gateway-step-label">Select payment method</p>
+        <div class="method-tiles" id="methodTiles">
+            <button type="button" class="method-tile" data-method="ONLINE_BANKING">
+                <span class="method-icon">Bank</span><span class="method-name">Online Banking</span>
+            </button>
+            <button type="button" class="method-tile" data-method="E_WALLET">
+                <span class="method-icon">Wallet</span><span class="method-name">E-Wallet</span>
+            </button>
+            <button type="button" class="method-tile" data-method="CARD">
+                <span class="method-icon">Card</span><span class="method-name">Card</span>
+            </button>
+            <button type="button" class="method-tile" data-method="CASH">
+                <span class="method-icon">Cash</span><span class="method-name">Cash</span>
+            </button>
+        </div>
+        <div class="form-error" id="paymentMethodError"></div>
+        <div class="modal-actions">
+            <button type="button" class="btn-secondary" onclick="showGatewayStep(1)">Back</button>
+            <button type="button" class="btn-primary" onclick="proceedToPaymentDetails()">Continue</button>
+        </div>
+    </div>
+    <div class="gateway-step" id="gatewayStep3">
+        <p class="gateway-step-label" id="gatewayDetailsTitle">Payment details</p>
+        <div class="gateway-details-panel" id="detailsCard">
+            <div class="form-group"><label>Card number</label><input type="text" id="payCardNumber" placeholder="4242 4242 4242 4242" maxlength="19" autocomplete="off"></div>
+            <div class="form-group"><label>Name on card</label><input type="text" id="payCardName" placeholder="As shown on card" autocomplete="off"></div>
+            <div class="form-row">
+                <div class="form-group"><label>Expiry</label><input type="text" id="payCardExpiry" placeholder="MM/YY" maxlength="5" autocomplete="off"></div>
+                <div class="form-group"><label>CVV</label><input type="text" id="payCardCvv" placeholder="123" maxlength="4" autocomplete="off"></div>
+            </div>
+        </div>
+        <div class="gateway-details-panel" id="detailsBanking">
+            <div class="form-group"><label>Select your bank</label><select id="payBankCode">
+                <option value="maybank">Maybank</option><option value="cimb">CIMB Bank</option>
+                <option value="public">Public Bank</option><option value="rhb">RHB Bank</option>
+                <option value="hongleong">Hong Leong Bank</option><option value="demo-fail">Demo Bank (Fail)</option>
+            </select></div>
+            <p class="gateway-hint">You will be redirected to your bank secure login in production.</p>
+        </div>
+        <div class="gateway-details-panel" id="detailsWallet">
+            <p class="gateway-hint">Choose your e-wallet provider</p>
+            <div class="wallet-tiles">
+                <button type="button" class="wallet-tile active" data-wallet="tng">Touch n Go</button>
+                <button type="button" class="wallet-tile" data-wallet="grabpay">GrabPay</button>
+                <button type="button" class="wallet-tile" data-wallet="boost">Boost</button>
+                <button type="button" class="wallet-tile" data-wallet="demo-fail">Demo Fail</button>
+            </div>
+        </div>
+        <div class="gateway-details-panel" id="detailsCash">
+            <div class="gateway-cash-notice"><span class="gateway-cash-icon">Office</span><div>
+                <strong>Pay at sports office counter</strong>
+                <p>Bring your student ID and mention rental ref <span id="payCashRef">-</span>.</p>
+            </div></div>
+        </div>
+        <div class="form-error" id="paymentDetailsError"></div>
+        <div class="modal-actions">
+            <button type="button" class="btn-secondary" onclick="showGatewayStep(2)">Back</button>
+            <button type="button" class="btn-primary" id="paySubmitBtn" onclick="submitGatewayPayment()">Pay now</button>
+        </div>
+    </div>
+    <div class="gateway-step" id="gatewayStep4">
+        <div class="gateway-processing"><div class="gateway-spinner"></div>
+            <p class="gateway-processing-title">Processing payment</p>
+            <p class="gateway-processing-sub">Contacting payment provider...</p>
+        </div></div>
+    <div class="gateway-step" id="gatewayStep5">
+        <div class="gateway-result" id="gatewayResultSuccess">
+            <div class="gateway-result-icon success">OK</div>
+            <p class="gateway-result-title">Payment successful</p>
+            <p class="gateway-result-sub">Your deposit has been recorded.</p>
+            <div class="gateway-txn-ref"><span>Transaction ref</span><strong id="payTxnRef">-</strong></div>
+        </div>
+        <div class="gateway-result" id="gatewayResultFailure">
+            <div class="gateway-result-icon failure">X</div>
+            <p class="gateway-result-title">Payment failed</p>
+            <p class="gateway-result-sub" id="payFailureMessage">Your payment could not be processed.</p>
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="btn-secondary" id="gatewayRetryBtn" onclick="retryGatewayPayment()">Try again</button>
+            <button type="button" class="btn-primary" onclick="finishPaymentGateway()">Done</button>
+        </div>
+    </div>
+    <div class="gateway-footer">
+        <span>Demo success: <code>4242 4242 4242 4242</code></span>
+        <span>Demo fail: card ending <code>0002</code></span>
+    </div>
 </div>
 
 <!-- STATUS UPDATE MODAL -->
@@ -595,5 +683,6 @@
 <script>window.ESUKAN_API_BASE = window.ESUKAN_API_BASE || '';</script>
 <script src="/js/auth.js"></script>
 <script src="/js/app.js"></script>
+<script src="/js/payment-gateway.js"></script>
 </body>
 </html>

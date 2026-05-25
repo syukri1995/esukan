@@ -1,6 +1,8 @@
 package com.esukan.model;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 public class TournamentRegistration {
 
@@ -9,6 +11,7 @@ public class TournamentRegistration {
     private String teamName;
     private String contactEmail;
     private User registeredBy;
+    private List<TournamentTeamMember> members = new ArrayList<>();
     private LocalDateTime createdAt = LocalDateTime.now();
 
     public Long getId() {
@@ -49,6 +52,14 @@ public class TournamentRegistration {
 
     public void setRegisteredBy(User registeredBy) {
         this.registeredBy = registeredBy;
+    }
+
+    public List<TournamentTeamMember> getMembers() {
+        return members;
+    }
+
+    public void setMembers(List<TournamentTeamMember> members) {
+        this.members = members != null ? members : new ArrayList<>();
     }
 
     public LocalDateTime getCreatedAt() {

@@ -56,6 +56,7 @@ public class WaitlistServlet extends BaseHttpServlet {
             LocalTime startTime = LocalTime.parse(String.valueOf(payload.get("startTime")));
             LocalTime endTime = LocalTime.parse(String.valueOf(payload.get("endTime")));
             long facilityId = ServletUtil.parseLongValue(payload.get("facilityId"));
+            OperatingHoursHelper.validateBookingSlot(conn, facilityId, bookingDate, startTime, endTime);
             if (!BookingSlotHelper.hasConflict(conn, facilityId, bookingDate, startTime, endTime)) {
                 ServletUtil.writeJson(resp, HttpServletResponse.SC_BAD_REQUEST,
                         Map.of("error", "This time slot is available. Book the facility directly instead of joining the waitlist."));

@@ -3,6 +3,7 @@ package com.esukan.listener;
 import at.favre.lib.crypto.bcrypt.BCrypt;
 import com.esukan.model.User;
 import com.esukan.model.UserRole;
+import com.esukan.servlet.SchemaMigration;
 import com.esukan.servlet.UserQueries;
 import com.esukan.util.DBConnection;
 
@@ -26,6 +27,7 @@ public class EsukanContextListener implements ServletContextListener {
             DBConnection.init();
             try (Connection conn = DBConnection.getConnection()) {
                 runBootstrapSql(conn);
+                SchemaMigration.runFeatureMigrations(conn);
                 seedIfEmpty(conn);
                 ensureSmokeUsers(conn);
             }

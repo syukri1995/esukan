@@ -15,6 +15,7 @@ public class Payment {
 
     private Long id;
     private Long rentalId;
+    private Long bookingId;
     private PaymentMethod method;
     private BigDecimal amount;
     private PaymentStatus status = PaymentStatus.PENDING;
@@ -35,6 +36,14 @@ public class Payment {
 
     public void setRentalId(Long rentalId) {
         this.rentalId = rentalId;
+    }
+
+    public Long getBookingId() {
+        return bookingId;
+    }
+
+    public void setBookingId(Long bookingId) {
+        this.bookingId = bookingId;
     }
 
     public PaymentMethod getMethod() {

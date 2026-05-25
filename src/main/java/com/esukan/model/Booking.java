@@ -1,5 +1,6 @@
 package com.esukan.model;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -20,6 +21,8 @@ public class Booking {
     private LocalTime startTime;
     private LocalTime endTime;
     private BookingStatus status = BookingStatus.PENDING;
+    private BigDecimal estimatedCost = BigDecimal.ZERO;
+    private String paymentStatus;
     private String notes;
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -101,6 +104,22 @@ public class Booking {
 
     public void setStatus(BookingStatus status) {
         this.status = status;
+    }
+
+    public BigDecimal getEstimatedCost() {
+        return estimatedCost;
+    }
+
+    public void setEstimatedCost(BigDecimal estimatedCost) {
+        this.estimatedCost = estimatedCost;
+    }
+
+    public String getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public void setPaymentStatus(String paymentStatus) {
+        this.paymentStatus = paymentStatus;
     }
 
     public String getNotes() {

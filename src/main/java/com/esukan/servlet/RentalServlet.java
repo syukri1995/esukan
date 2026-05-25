@@ -78,7 +78,12 @@ public class RentalServlet extends BaseHttpServlet {
             if (payload.get("depositAmount") != null) {
                 deposit = new BigDecimal(payload.get("depositAmount").toString()).setScale(2, RoundingMode.HALF_UP);
             } else {
-                deposit = new BigDecimal(qty).multiply(new BigDecimal("10")).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal rate = equipment.getCostPerHour() != null ? equipment.getCostPerHour() : BigDecimal.ZERO;
+                if (rate.compareTo(BigDecimal.ZERO) > 0) {
+                    deposit = rate.multiply(new BigDecimal(qty)).setScale(2, RoundingMode.HALF_UP);
+                } else {
+                    deposit = new BigDecimal(qty).multiply(new BigDecimal("10")).setScale(2, RoundingMode.HALF_UP);
+                }
                 if (deposit.compareTo(new BigDecimal("20")) < 0) {
                     deposit = new BigDecimal("20.00");
                 }
@@ -247,7 +252,7 @@ public class RentalServlet extends BaseHttpServlet {
 
     private static Optional<Equipment> loadEquipment(Connection conn, long id) throws java.sql.SQLException {
         try (PreparedStatement ps = conn.prepareStatement(
-                "SELECT id, name, category, status, quantity, description, last_updated FROM equipment WHERE id = ?")) {
+                "SELECT id, name, category, status, quantity, description, cost_per_hour, last_updated FROM equipment WHERE id = ?")) {
             ps.setLong(1, id);
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) {

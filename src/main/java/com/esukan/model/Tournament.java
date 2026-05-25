@@ -9,12 +9,17 @@ public class Tournament {
         DRAFT, OPEN, CLOSED, COMPLETED
     }
 
+    public enum TournamentFormat {
+        SINGLE_ELIMINATION, ROUND_ROBIN
+    }
+
     private Long id;
     private String title;
     private String description;
     private LocalDate startDate;
     private LocalDate endDate;
     private TournamentStatus status = TournamentStatus.DRAFT;
+    private TournamentFormat format = TournamentFormat.SINGLE_ELIMINATION;
     private User organizer;
     private Facility venueFacility;
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -65,6 +70,14 @@ public class Tournament {
 
     public void setStatus(TournamentStatus status) {
         this.status = status;
+    }
+
+    public TournamentFormat getFormat() {
+        return format;
+    }
+
+    public void setFormat(TournamentFormat format) {
+        this.format = format;
     }
 
     public User getOrganizer() {

@@ -2,6 +2,7 @@ package com.esukan.servlet;
 
 import com.esukan.model.Tournament;
 import com.esukan.model.TournamentRegistration;
+import com.esukan.model.TournamentTeamMember;
 import com.esukan.model.User;
 import com.esukan.model.UserRole;
 import com.esukan.security.JwtHelper;
@@ -28,7 +29,7 @@ public class TournamentServlet extends BaseHttpServlet {
 
     private static final String T_JOIN = """
             SELECT t.id as t_id, t.title as t_title, t.description as t_description, t.start_date, t.end_date,
-            t.status as t_status, t.created_at as t_created_at, t.organizer_id, t.venue_facility_id,
+            t.status as t_status, t.format as format, t.created_at as t_created_at, t.organizer_id, t.venue_facility_id,
             o.id as o_id, o.username as o_username, o.email as o_email, o.password_hash as o_password_hash,
             o.role as o_role, o.full_name as o_full_name, o.student_id_number as o_student_id_number,
             o.enabled as o_enabled, o.created_at as o_created_at,
@@ -46,6 +47,7 @@ public class TournamentServlet extends BaseHttpServlet {
         }
         String[] segs = ServletUtil.pathSegments(req);
         try (Connection conn = DBConnection.getConnection()) {
+            SchemaMigration.ensureTournamentTeamMembersTable(conn);
             UserPrincipal full = JwtHelper.enrich(auth, UserQueries.loadUser(conn, auth.getId()));
             if (segs.length == 0) {
                 ServletUtil.writeJson(resp, HttpServletResponse.SC_OK, listVisible(conn, full));
@@ -63,6 +65,43 @@ public class TournamentServlet extends BaseHttpServlet {
                     return;
                 }
                 ServletUtil.writeJson(resp, HttpServletResponse.SC_OK, listRegs(conn, tid));
+                return;
+            }
+            if (segs.length == 2 && "bracket".equals(segs[1])) {
+                long tid = Long.parseLong(segs[0]);
+                Optional<Tournament> tt = findById(conn, tid);
+                if (tt.isEmpty() || !canView(tt.get(), full)) {
+                    ServletUtil.writeJson(resp, HttpServletResponse.SC_NOT_FOUND, Map.of());
+                    return;
+                }
+                ServletUtil.writeJson(resp, HttpServletResponse.SC_OK, TournamentBracketService.getBracketPayload(conn, tid));
+                return;
+            }
+            if (segs.length == 2 && "my-teams".equals(segs[1])) {
+                long tid = Long.parseLong(segs[0]);
+                TournamentTeamService.requireStudent(full);
+                Optional<Tournament> tt = findById(conn, tid);
+                if (tt.isEmpty() || !canView(tt.get(), full)) {
+                    ServletUtil.writeJson(resp, HttpServletResponse.SC_NOT_FOUND, Map.of());
+                    return;
+                }
+                ServletUtil.writeJson(resp, HttpServletResponse.SC_OK,
+                        TournamentTeamService.listMyTeams(conn, tid, full.getId()));
+                return;
+            }
+            if (segs.length == 4 && "registrations".equals(segs[1]) && "members".equals(segs[3])) {
+                long tid = Long.parseLong(segs[0]);
+                long regId = Long.parseLong(segs[2]);
+                TournamentTeamService.requireStudent(full);
+                if (!TournamentTeamService.isCaptain(conn, regId, full.getId())) {
+                    ServletUtil.writeJson(resp, HttpServletResponse.SC_FORBIDDEN, Map.of("error", "Forbidden"));
+                    return;
+                }
+                if (!registrationInTournament(conn, regId, tid)) {
+                    ServletUtil.writeJson(resp, HttpServletResponse.SC_NOT_FOUND, Map.of());
+                    return;
+                }
+                ServletUtil.writeJson(resp, HttpServletResponse.SC_OK, TournamentTeamService.loadMembers(conn, regId));
                 return;
             }
             if (segs.length == 1) {
@@ -91,6 +130,8 @@ public class TournamentServlet extends BaseHttpServlet {
         Type mapType = new TypeToken<Map<String, Object>>() {}.getType();
         Map<String, Object> body = com.esukan.util.Jsons.gson().fromJson(ServletUtil.readBody(req), mapType);
         try (Connection conn = DBConnection.getConnection()) {
+            SchemaMigration.ensureTournamentSchema(conn);
+            SchemaMigration.ensureTournamentTeamMembersTable(conn);
             UserPrincipal full = JwtHelper.enrich(auth, UserQueries.loadUser(conn, auth.getId()));
             if (segs.length == 0) {
                 if (full.getRole() != UserRole.LECTURER && full.getRole() != UserRole.ADMIN) {
@@ -102,11 +143,14 @@ public class TournamentServlet extends BaseHttpServlet {
                         : Tournament.TournamentStatus.DRAFT;
                 Long venueId = body.get("venueFacilityId") != null
                         ? ServletUtil.parseLongValue(body.get("venueFacilityId")) : null;
+                Tournament.TournamentFormat fmt = body.get("format") != null
+                        ? Tournament.TournamentFormat.valueOf(String.valueOf(body.get("format")).trim())
+                        : Tournament.TournamentFormat.SINGLE_ELIMINATION;
                 long id = insertTournament(conn, full.getId(), String.valueOf(body.get("title")),
                         body.get("description") != null ? String.valueOf(body.get("description")) : null,
                         LocalDate.parse(String.valueOf(body.get("startDate"))),
                         LocalDate.parse(String.valueOf(body.get("endDate"))),
-                        venueId, st);
+                        venueId, st, fmt);
                 ServletUtil.writeJson(resp, HttpServletResponse.SC_OK, findById(conn, id).orElseThrow());
                 return;
             }
@@ -132,8 +176,60 @@ public class TournamentServlet extends BaseHttpServlet {
                 }
                 User u = UserQueries.loadUser(conn, full.getId());
                 String email = body.get("contactEmail") != null ? String.valueOf(body.get("contactEmail")).trim() : u.getEmail();
-                long regId = insertRegistration(conn, tid, teamName, email, u.getId());
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> membersRaw = body.get("members") instanceof List<?> list
+                        ? (List<Map<String, Object>>) list : null;
+                List<TournamentTeamMember> roster = membersRaw != null && !membersRaw.isEmpty()
+                        ? TournamentTeamService.parseMembersFromBody(membersRaw, u)
+                        : TournamentTeamService.parseMembersFromBody(null, u);
+                long regId = TournamentTeamService.createRegistration(conn, tid, teamName, email, u.getId(), roster);
                 ServletUtil.writeJson(resp, HttpServletResponse.SC_OK, findRegistration(conn, regId));
+                return;
+            }
+            if (segs.length == 4 && "matches".equals(segs[1]) && "register".equals(segs[3])) {
+                long tid = Long.parseLong(segs[0]);
+                long matchId = Long.parseLong(segs[2]);
+                TournamentTeamService.requireStudent(full);
+                String slot = body.get("slot") != null ? String.valueOf(body.get("slot")) : null;
+                String mode = body.get("mode") != null ? String.valueOf(body.get("mode")) : null;
+                Long registrationId = body.get("registrationId") != null
+                        ? ServletUtil.parseLongValue(body.get("registrationId")) : null;
+                String teamName = body.get("teamName") != null ? String.valueOf(body.get("teamName")) : null;
+                String contactEmail = body.get("contactEmail") != null ? String.valueOf(body.get("contactEmail")) : null;
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> membersRaw = body.get("members") instanceof List<?> list
+                        ? (List<Map<String, Object>>) list : null;
+                User u = UserQueries.loadUser(conn, full.getId());
+                List<TournamentTeamMember> members = membersRaw != null
+                        ? TournamentTeamService.parseMembersFromBody(membersRaw, u) : null;
+                boolean autoCommit = conn.getAutoCommit();
+                try {
+                    conn.setAutoCommit(false);
+                    Map<String, Object> payload = TournamentTeamService.registerForMatchSlot(conn, tid, matchId,
+                            full.getId(), slot, mode, registrationId, teamName, contactEmail, members);
+                    conn.commit();
+                    ServletUtil.writeJson(resp, HttpServletResponse.SC_OK, payload);
+                } catch (Exception ex) {
+                    conn.rollback();
+                    throw ex;
+                } finally {
+                    conn.setAutoCommit(autoCommit);
+                }
+                return;
+            }
+            if (segs.length == 3 && "bracket".equals(segs[1]) && "generate".equals(segs[2])) {
+                long tid = Long.parseLong(segs[0]);
+                Tournament t = findById(conn, tid).orElse(null);
+                if (t == null) {
+                    ServletUtil.writeJson(resp, HttpServletResponse.SC_NOT_FOUND, Map.of());
+                    return;
+                }
+                if (!canEdit(t, full)) {
+                    ServletUtil.writeJson(resp, HttpServletResponse.SC_FORBIDDEN, Map.of("error", "Forbidden"));
+                    return;
+                }
+                TournamentBracketService.generateBracket(conn, tid);
+                ServletUtil.writeJson(resp, HttpServletResponse.SC_OK, TournamentBracketService.getBracketPayload(conn, tid));
                 return;
             }
         } catch (Exception e) {
@@ -144,19 +240,81 @@ public class TournamentServlet extends BaseHttpServlet {
     }
 
     @Override
+    protected void doPatch(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        UserPrincipal auth = ServletUtil.requireAuth(req, resp);
+        if (auth == null) {
+            return;
+        }
+        String[] segs = ServletUtil.pathSegments(req);
+        if (segs.length != 3 || !"matches".equals(segs[1])) {
+            ServletUtil.writeJson(resp, HttpServletResponse.SC_NOT_FOUND, Map.of());
+            return;
+        }
+        long tournamentId = Long.parseLong(segs[0]);
+        long matchId = Long.parseLong(segs[2]);
+        Type mapType = new TypeToken<Map<String, Object>>() {}.getType();
+        Map<String, Object> body = com.esukan.util.Jsons.gson().fromJson(ServletUtil.readBody(req), mapType);
+        try (Connection conn = DBConnection.getConnection()) {
+            UserPrincipal full = JwtHelper.enrich(auth, UserQueries.loadUser(conn, auth.getId()));
+            Tournament t = findById(conn, tournamentId).orElse(null);
+            if (t == null) {
+                ServletUtil.writeJson(resp, HttpServletResponse.SC_NOT_FOUND, Map.of());
+                return;
+            }
+            if (!canEdit(t, full)) {
+                ServletUtil.writeJson(resp, HttpServletResponse.SC_FORBIDDEN, Map.of("error", "Forbidden"));
+                return;
+            }
+            long winnerId = ServletUtil.parseLongValue(body.get("winnerRegistrationId"));
+            TournamentBracketService.recordWinner(conn, tournamentId, matchId, winnerId);
+            ServletUtil.writeJson(resp, HttpServletResponse.SC_OK, TournamentBracketService.getBracketPayload(conn, tournamentId));
+        } catch (Exception e) {
+            ServletUtil.writeJson(resp, HttpServletResponse.SC_BAD_REQUEST, Map.of("error", e.getMessage()));
+        }
+    }
+
+    @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         UserPrincipal auth = ServletUtil.requireAuth(req, resp);
         if (auth == null) {
             return;
         }
         String[] segs = ServletUtil.pathSegments(req);
+        Type mapType = new TypeToken<Map<String, Object>>() {}.getType();
+        Map<String, Object> body = com.esukan.util.Jsons.gson().fromJson(ServletUtil.readBody(req), mapType);
+        if (segs.length == 4 && "registrations".equals(segs[1]) && "members".equals(segs[3])) {
+            long tid = Long.parseLong(segs[0]);
+            long regId = Long.parseLong(segs[2]);
+            try (Connection conn = DBConnection.getConnection()) {
+                SchemaMigration.ensureTournamentTeamMembersTable(conn);
+                UserPrincipal full = JwtHelper.enrich(auth, UserQueries.loadUser(conn, auth.getId()));
+                TournamentTeamService.requireStudent(full);
+                if (!TournamentTeamService.isCaptain(conn, regId, full.getId())) {
+                    ServletUtil.writeJson(resp, HttpServletResponse.SC_FORBIDDEN, Map.of("error", "Forbidden"));
+                    return;
+                }
+                if (!registrationInTournament(conn, regId, tid)) {
+                    ServletUtil.writeJson(resp, HttpServletResponse.SC_NOT_FOUND, Map.of());
+                    return;
+                }
+                User u = UserQueries.loadUser(conn, full.getId());
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> membersRaw = body.get("members") instanceof List<?> list
+                        ? (List<Map<String, Object>>) list : List.of();
+                List<TournamentTeamMember> roster = TournamentTeamService.parseMembersFromBody(membersRaw, u);
+                TournamentTeamService.replaceMembers(conn, regId, roster);
+                TournamentRegistration reg = findRegistration(conn, regId);
+                ServletUtil.writeJson(resp, HttpServletResponse.SC_OK, reg);
+            } catch (Exception e) {
+                ServletUtil.writeJson(resp, HttpServletResponse.SC_BAD_REQUEST, Map.of("error", e.getMessage()));
+            }
+            return;
+        }
         if (segs.length != 1) {
             ServletUtil.writeJson(resp, HttpServletResponse.SC_NOT_FOUND, Map.of());
             return;
         }
         long id = Long.parseLong(segs[0]);
-        Type mapType = new TypeToken<Map<String, Object>>() {}.getType();
-        Map<String, Object> body = com.esukan.util.Jsons.gson().fromJson(ServletUtil.readBody(req), mapType);
         try (Connection conn = DBConnection.getConnection()) {
             UserPrincipal full = JwtHelper.enrich(auth, UserQueries.loadUser(conn, auth.getId()));
             Tournament t = findById(conn, id).orElse(null);
@@ -178,7 +336,10 @@ public class TournamentServlet extends BaseHttpServlet {
             Tournament.TournamentStatus st = body.get("status") != null
                     ? Tournament.TournamentStatus.valueOf(body.get("status").toString())
                     : t.getStatus();
-            updateTournament(conn, id, title, desc, sd, ed, venueId, st);
+            Tournament.TournamentFormat fmt = body.get("format") != null
+                    ? Tournament.TournamentFormat.valueOf(String.valueOf(body.get("format")).trim())
+                    : t.getFormat();
+            updateTournament(conn, id, title, desc, sd, ed, venueId, st, fmt);
             ServletUtil.writeJson(resp, HttpServletResponse.SC_OK, findById(conn, id).orElseThrow());
         } catch (Exception e) {
             ServletUtil.writeJson(resp, HttpServletResponse.SC_BAD_REQUEST, Map.of("error", e.getMessage()));
@@ -207,6 +368,10 @@ public class TournamentServlet extends BaseHttpServlet {
             if (!canEdit(t, full)) {
                 ServletUtil.writeJson(resp, HttpServletResponse.SC_FORBIDDEN, Map.of());
                 return;
+            }
+            try (PreparedStatement ps = conn.prepareStatement("DELETE FROM tournament_matches WHERE tournament_id = ?")) {
+                ps.setLong(1, id);
+                ps.executeUpdate();
             }
             try (PreparedStatement ps = conn.prepareStatement("DELETE FROM tournament_registrations WHERE tournament_id = ?")) {
                 ps.setLong(1, id);
@@ -278,10 +443,11 @@ public class TournamentServlet extends BaseHttpServlet {
 
     private static long insertTournament(Connection conn, long organizerId, String title, String desc,
                                          LocalDate start, LocalDate end, Long venueId,
-                                         Tournament.TournamentStatus status) throws java.sql.SQLException {
+                                         Tournament.TournamentStatus status, Tournament.TournamentFormat format)
+            throws java.sql.SQLException {
         String sql = """
-                INSERT INTO tournaments (title, description, start_date, end_date, status, organizer_id, venue_facility_id)
-                VALUES (?,?,?,?,?,?,?)
+                INSERT INTO tournaments (title, description, start_date, end_date, status, format, organizer_id, venue_facility_id)
+                VALUES (?,?,?,?,?,?,?,?)
                 """;
         try (PreparedStatement ps = conn.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, title);
@@ -289,11 +455,12 @@ public class TournamentServlet extends BaseHttpServlet {
             ps.setObject(3, start);
             ps.setObject(4, end);
             ps.setString(5, status.name());
-            ps.setLong(6, organizerId);
+            ps.setString(6, format.name());
+            ps.setLong(7, organizerId);
             if (venueId == null) {
-                ps.setObject(7, null);
+                ps.setObject(8, null);
             } else {
-                ps.setLong(7, venueId);
+                ps.setLong(8, venueId);
             }
             ps.executeUpdate();
             ResultSet k = ps.getGeneratedKeys();
@@ -304,20 +471,22 @@ public class TournamentServlet extends BaseHttpServlet {
 
     private static void updateTournament(Connection conn, long id, String title, String desc,
                                          LocalDate start, LocalDate end, Long venueId,
-                                         Tournament.TournamentStatus status) throws java.sql.SQLException {
-        String sql = "UPDATE tournaments SET title=?, description=?, start_date=?, end_date=?, status=?, venue_facility_id=? WHERE id=?";
+                                         Tournament.TournamentStatus status, Tournament.TournamentFormat format)
+            throws java.sql.SQLException {
+        String sql = "UPDATE tournaments SET title=?, description=?, start_date=?, end_date=?, status=?, format=?, venue_facility_id=? WHERE id=?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, title);
             ps.setString(2, desc);
             ps.setObject(3, start);
             ps.setObject(4, end);
             ps.setString(5, status.name());
+            ps.setString(6, format.name());
             if (venueId == null) {
-                ps.setObject(6, null);
+                ps.setObject(7, null);
             } else {
-                ps.setLong(6, venueId);
+                ps.setLong(7, venueId);
             }
-            ps.setLong(7, id);
+            ps.setLong(8, id);
             ps.executeUpdate();
         }
     }
@@ -351,7 +520,7 @@ public class TournamentServlet extends BaseHttpServlet {
         }
     }
 
-    private static TournamentRegistration findRegistration(Connection conn, long regId) throws java.sql.SQLException {
+    private static TournamentRegistration findRegistration(Connection conn, long regId) throws Exception {
         String sql = """
                 SELECT r.id as reg_id, r.team_name as reg_team_name, r.contact_email as reg_contact_email,
                 r.created_at as reg_created_at,
@@ -365,13 +534,26 @@ public class TournamentServlet extends BaseHttpServlet {
                 if (!rs.next()) {
                     throw new java.sql.SQLException("Registration not found");
                 }
-                return JdbcSupport.mapRegistrationJoined(rs);
+                TournamentRegistration reg = JdbcSupport.mapRegistrationJoined(rs);
+                reg.setMembers(TournamentTeamService.loadMembers(conn, regId));
+                return reg;
             }
         }
     }
 
-    private static List<TournamentRegistration> listRegs(Connection conn, long tournamentId)
+    private static boolean registrationInTournament(Connection conn, long regId, long tournamentId)
             throws java.sql.SQLException {
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT 1 FROM tournament_registrations WHERE id = ? AND tournament_id = ?")) {
+            ps.setLong(1, regId);
+            ps.setLong(2, tournamentId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    private static List<TournamentRegistration> listRegs(Connection conn, long tournamentId) throws Exception {
         String sql = """
                 SELECT r.id as reg_id, r.team_name as reg_team_name, r.contact_email as reg_contact_email,
                 r.created_at as reg_created_at,
@@ -384,7 +566,9 @@ public class TournamentServlet extends BaseHttpServlet {
             try (ResultSet rs = ps.executeQuery()) {
                 List<TournamentRegistration> list = new ArrayList<>();
                 while (rs.next()) {
-                    list.add(JdbcSupport.mapRegistrationJoined(rs));
+                    TournamentRegistration reg = JdbcSupport.mapRegistrationJoined(rs);
+                    reg.setMembers(TournamentTeamService.loadMembers(conn, reg.getId()));
+                    list.add(reg);
                 }
                 return list;
             }

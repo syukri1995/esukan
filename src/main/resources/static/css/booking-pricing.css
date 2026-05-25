@@ -1,0 +1,89 @@
+.booking-pricing-card {
+    display: none;
+    margin: 14px 0 18px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--border2);
+    background: linear-gradient(145deg, rgba(57, 224, 123, 0.06) 0%, var(--bg3) 55%);
+}
+
+.booking-pricing-card.is-visible {
+    display: block;
+}
+
+.booking-pricing-card.is-empty {
+    border-style: dashed;
+    background: var(--bg3);
+}
+
+.booking-pricing-header {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 12px;
+}
+
+.booking-pricing-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.booking-pricing-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 13px;
+}
+
+.booking-pricing-label {
+    color: var(--text2);
+}
+
+.booking-pricing-value {
+    color: var(--text);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+}
+
+.booking-pricing-value--rate {
+    color: var(--accent);
+}
+
+.booking-pricing-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 10px 0 4px;
+}
+
+.booking-pricing-row--total {
+    margin-top: 2px;
+}
+
+.booking-pricing-total-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.booking-pricing-total-value {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+}
+
+.booking-pricing-hint {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--text3);
+    line-height: 1.4;
+}
+
+.booking-pricing-hint.is-warning {
+    color: #f5a623;
+}

@@ -48,6 +48,7 @@ public class FacilityServlet extends BaseHttpServlet {
                     ServletUtil.writeJson(resp, HttpServletResponse.SC_NOT_FOUND, Map.of());
                     return;
                 }
+                FacilityQueries.enrichForResponse(conn, f.get());
                 ServletUtil.writeJson(resp, HttpServletResponse.SC_OK, f.get());
                 return;
             }
@@ -65,17 +66,16 @@ public class FacilityServlet extends BaseHttpServlet {
         }
         Facility f = Jsons.gson().fromJson(ServletUtil.readBody(req), Facility.class);
         try (Connection conn = DBConnection.getConnection()) {
-            String sql = "INSERT INTO facilities (name, type, description, is_active) VALUES (?,?,?,?)";
+            String sql = "INSERT INTO facilities (name, type, description, is_active, open_time, close_time, cost_per_hour) VALUES (?,?,?,?,?,?,?)";
             try (PreparedStatement ps = conn.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)) {
-                ps.setString(1, f.getName());
-                ps.setString(2, f.getType().name());
-                ps.setString(3, f.getDescription());
-                ps.setBoolean(4, f.getIsActive() != null && f.getIsActive());
+                FacilityQueries.bindFacilityWrite(ps, f, false);
                 ps.executeUpdate();
                 ResultSet k = ps.getGeneratedKeys();
                 k.next();
                 f.setId(k.getLong(1));
             }
+            FacilityQueries.syncEquipmentLinks(conn, f.getId(), f.getEquipmentIds());
+            FacilityQueries.enrichForResponse(conn, f);
             ServletUtil.writeJson(resp, HttpServletResponse.SC_OK, f);
         } catch (Exception e) {
             ServletUtil.writeJson(resp, HttpServletResponse.SC_BAD_REQUEST, Map.of("error", e.getMessage()));
@@ -95,25 +95,24 @@ public class FacilityServlet extends BaseHttpServlet {
         }
         long id = Long.parseLong(segs[0]);
         Facility f = Jsons.gson().fromJson(ServletUtil.readBody(req), Facility.class);
+        f.setId(id);
         try (Connection conn = DBConnection.getConnection()) {
-            String sql = "UPDATE facilities SET name=?, type=?, description=?, is_active=? WHERE id=?";
+            String sql = "UPDATE facilities SET name=?, type=?, description=?, is_active=?, open_time=?, close_time=?, cost_per_hour=? WHERE id=?";
             try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                ps.setString(1, f.getName());
-                ps.setString(2, f.getType().name());
-                ps.setString(3, f.getDescription());
-                ps.setBoolean(4, f.getIsActive() != null && f.getIsActive());
-                ps.setLong(5, id);
+                FacilityQueries.bindFacilityWrite(ps, f, true);
                 if (ps.executeUpdate() == 0) {
                     ServletUtil.writeJson(resp, HttpServletResponse.SC_NOT_FOUND, Map.of());
                     return;
                 }
             }
+            FacilityQueries.syncEquipmentLinks(conn, id, f.getEquipmentIds());
             Optional<Facility> out = findById(conn, id);
             if (out.isPresent()) {
+                FacilityQueries.enrichForResponse(conn, out.get());
                 ServletUtil.writeJson(resp, HttpServletResponse.SC_OK, out.get());
             }
         } catch (Exception e) {
-            ServletUtil.writeJson(resp, HttpServletResponse.SC_NOT_FOUND, Map.of());
+            ServletUtil.writeJson(resp, HttpServletResponse.SC_BAD_REQUEST, Map.of("error", e.getMessage()));
         }
     }
 
@@ -147,22 +146,29 @@ public class FacilityServlet extends BaseHttpServlet {
         return true;
     }
 
-    private static List<Facility> listAll(Connection conn) throws java.sql.SQLException {
-        return queryFacilities(conn, "SELECT id, name, type, description, is_active, created_at FROM facilities ORDER BY id");
+    private static List<Facility> listAll(Connection conn) throws Exception {
+        return enrichList(conn, queryFacilities(conn, FacilityQueries.FACILITY_SELECT + " ORDER BY id"));
     }
 
-    private static List<Facility> listActive(Connection conn) throws java.sql.SQLException {
-        return queryFacilities(conn, "SELECT id, name, type, description, is_active, created_at FROM facilities WHERE is_active = TRUE ORDER BY id");
+    private static List<Facility> listActive(Connection conn) throws Exception {
+        return enrichList(conn, queryFacilities(conn, FacilityQueries.FACILITY_SELECT + " WHERE is_active = TRUE ORDER BY id"));
     }
 
-    private static List<Facility> listByType(Connection conn, Facility.FacilityType t) throws java.sql.SQLException {
+    private static List<Facility> listByType(Connection conn, Facility.FacilityType t) throws Exception {
         try (PreparedStatement ps = conn.prepareStatement(
-                "SELECT id, name, type, description, is_active, created_at FROM facilities WHERE type = ? AND is_active = TRUE ORDER BY id")) {
+                FacilityQueries.FACILITY_SELECT + " WHERE type = ? AND is_active = TRUE ORDER BY id")) {
             ps.setString(1, t.name());
             try (ResultSet rs = ps.executeQuery()) {
-                return readList(rs);
+                return enrichList(conn, readList(rs));
             }
         }
+    }
+
+    private static List<Facility> enrichList(Connection conn, List<Facility> list) throws Exception {
+        for (Facility f : list) {
+            OperatingHoursHelper.enrichFacilityHours(conn, f);
+        }
+        return list;
     }
 
     private static List<Facility> queryFacilities(Connection conn, String sql) throws java.sql.SQLException {
@@ -181,8 +187,7 @@ public class FacilityServlet extends BaseHttpServlet {
     }
 
     private static Optional<Facility> findById(Connection conn, long id) throws java.sql.SQLException {
-        try (PreparedStatement ps = conn.prepareStatement(
-                "SELECT id, name, type, description, is_active, created_at FROM facilities WHERE id = ?")) {
+        try (PreparedStatement ps = conn.prepareStatement(FacilityQueries.FACILITY_SELECT + " WHERE id = ?")) {
             ps.setLong(1, id);
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) {

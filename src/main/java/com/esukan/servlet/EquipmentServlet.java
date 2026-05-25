@@ -73,13 +73,14 @@ public class EquipmentServlet extends BaseHttpServlet {
         }
         Equipment e = Jsons.gson().fromJson(ServletUtil.readBody(req), Equipment.class);
         try (Connection conn = DBConnection.getConnection()) {
-            String sql = "INSERT INTO equipment (name, category, status, quantity, description) VALUES (?,?,?,?,?)";
+            String sql = "INSERT INTO equipment (name, category, status, quantity, description, cost_per_hour) VALUES (?,?,?,?,?,?)";
             try (PreparedStatement ps = conn.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)) {
                 ps.setString(1, e.getName());
                 ps.setString(2, e.getCategory());
                 ps.setString(3, e.getStatus() != null ? e.getStatus().name() : Equipment.EquipmentStatus.AVAILABLE.name());
                 ps.setInt(4, e.getQuantity() != null ? e.getQuantity() : 1);
                 ps.setString(5, e.getDescription());
+                ps.setBigDecimal(6, e.getCostPerHour() != null ? e.getCostPerHour() : java.math.BigDecimal.ZERO);
                 ps.executeUpdate();
                 ResultSet k = ps.getGeneratedKeys();
                 k.next();
@@ -108,14 +109,15 @@ public class EquipmentServlet extends BaseHttpServlet {
         long id = Long.parseLong(segs[0]);
         Equipment e = Jsons.gson().fromJson(ServletUtil.readBody(req), Equipment.class);
         try (Connection conn = DBConnection.getConnection()) {
-            String sql = "UPDATE equipment SET name=?, category=?, status=?, quantity=?, description=?, last_updated=CURRENT_TIMESTAMP WHERE id=?";
+            String sql = "UPDATE equipment SET name=?, category=?, status=?, quantity=?, description=?, cost_per_hour=?, last_updated=CURRENT_TIMESTAMP WHERE id=?";
             try (PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setString(1, e.getName());
                 ps.setString(2, e.getCategory());
                 ps.setString(3, e.getStatus().name());
                 ps.setInt(4, e.getQuantity());
                 ps.setString(5, e.getDescription());
-                ps.setLong(6, id);
+                ps.setBigDecimal(6, e.getCostPerHour() != null ? e.getCostPerHour() : java.math.BigDecimal.ZERO);
+                ps.setLong(7, id);
                 if (ps.executeUpdate() == 0) {
                     ServletUtil.writeJson(resp, HttpServletResponse.SC_NOT_FOUND, Map.of());
                     return;
@@ -189,12 +191,12 @@ public class EquipmentServlet extends BaseHttpServlet {
     }
 
     private static List<Equipment> listAll(Connection conn) throws java.sql.SQLException {
-        return query(conn, "SELECT id, name, category, status, quantity, description, last_updated FROM equipment ORDER BY id");
+        return query(conn, "SELECT id, name, category, status, quantity, description, cost_per_hour, last_updated FROM equipment ORDER BY id");
     }
 
     private static List<Equipment> byStatus(Connection conn, Equipment.EquipmentStatus st) throws java.sql.SQLException {
         try (PreparedStatement ps = conn.prepareStatement(
-                "SELECT id, name, category, status, quantity, description, last_updated FROM equipment WHERE status = ? ORDER BY id")) {
+                "SELECT id, name, category, status, quantity, description, cost_per_hour, last_updated FROM equipment WHERE status = ? ORDER BY id")) {
             ps.setString(1, st.name());
             try (ResultSet rs = ps.executeQuery()) {
                 return read(rs);
@@ -219,7 +221,7 @@ public class EquipmentServlet extends BaseHttpServlet {
 
     private static Optional<Equipment> findById(Connection conn, long id) throws java.sql.SQLException {
         try (PreparedStatement ps = conn.prepareStatement(
-                "SELECT id, name, category, status, quantity, description, last_updated FROM equipment WHERE id = ?")) {
+                "SELECT id, name, category, status, quantity, description, cost_per_hour, last_updated FROM equipment WHERE id = ?")) {
             ps.setLong(1, id);
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) {

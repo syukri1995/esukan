@@ -1,5 +1,6 @@
 package com.esukan.model;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public class Equipment {
@@ -14,6 +15,7 @@ public class Equipment {
     private EquipmentStatus status = EquipmentStatus.AVAILABLE;
     private Integer quantity = 1;
     private String description;
+    private BigDecimal costPerHour = BigDecimal.ZERO;
     private LocalDateTime lastUpdated = LocalDateTime.now();
 
     public Long getId() {
@@ -62,6 +64,14 @@ public class Equipment {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public BigDecimal getCostPerHour() {
+        return costPerHour;
+    }
+
+    public void setCostPerHour(BigDecimal costPerHour) {
+        this.costPerHour = costPerHour;
     }
 
     public LocalDateTime getLastUpdated() {

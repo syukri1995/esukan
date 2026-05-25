@@ -17,6 +17,7 @@ import java.lang.reflect.Type;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -33,8 +34,10 @@ public class BookingServlet extends BaseHttpServlet {
             b.student_email as br_student_email, b.booking_date as br_booking_date,
             b.start_time as br_start_time, b.end_time as br_end_time, b.status as br_status,
             b.notes as br_notes, b.created_at as br_created_at, b.user_id as br_user_id,
+            b.estimated_cost as br_estimated_cost,
+            (SELECT p.status FROM payments p WHERE p.booking_id = b.id ORDER BY p.id DESC LIMIT 1) as payment_status,
             f.id as f_id, f.name as f_name, f.type as f_type, f.description as f_description,
-            f.is_active as f_is_active, f.created_at as f_created_at
+            f.is_active as f_is_active, f.cost_per_hour as f_cost_per_hour, f.created_at as f_created_at
             FROM bookings b JOIN facilities f ON b.facility_id = f.id
             """;
 
@@ -46,6 +49,7 @@ public class BookingServlet extends BaseHttpServlet {
         }
         String[] segs = ServletUtil.pathSegments(req);
         try (Connection conn = DBConnection.getConnection()) {
+            SchemaMigration.ensureBookingPaymentSchema(conn);
             UserPrincipal full = JwtHelper.enrich(auth, UserQueries.loadUser(conn, auth.getId()));
             if (segs.length == 0) {
                 List<Booking> list = full.getRole() == UserRole.ADMIN
@@ -106,6 +110,7 @@ public class BookingServlet extends BaseHttpServlet {
         Type mapType = new TypeToken<Map<String, Object>>() {}.getType();
         Map<String, Object> payload = com.esukan.util.Jsons.gson().fromJson(ServletUtil.readBody(req), mapType);
         try (Connection conn = DBConnection.getConnection()) {
+            SchemaMigration.ensureBookingPaymentSchema(conn);
             UserPrincipal full = JwtHelper.enrich(auth, UserQueries.loadUser(conn, auth.getId()));
             User u = UserQueries.loadUser(conn, full.getId());
             Booking booking = new Booking();
@@ -125,14 +130,20 @@ public class BookingServlet extends BaseHttpServlet {
             Facility facility = loadFacility(conn, facilityId)
                     .orElseThrow(() -> new RuntimeException("Facility not found"));
             booking.setFacility(facility);
+            OperatingHoursHelper.validateBookingSlot(conn, facilityId, booking.getBookingDate(),
+                    booking.getStartTime(), booking.getEndTime());
             if (BookingSlotHelper.hasConflict(conn, facilityId, booking.getBookingDate(), booking.getStartTime(),
                     booking.getEndTime())) {
                 throw new RuntimeException("Time slot conflict: This facility is already booked for the selected time.");
             }
+            BigDecimal estimatedCost = BookingCostHelper.computeHourlyCost(
+                    booking.getStartTime(), booking.getEndTime(), facility.getCostPerHour());
+            booking.setEstimatedCost(estimatedCost);
+            String initialStatus = estimatedCost.compareTo(BigDecimal.ZERO) <= 0 ? "CONFIRMED" : "PENDING";
             String sql = """
                     INSERT INTO bookings (student_name, student_id, student_email, facility_id, user_id,
-                    booking_date, start_time, end_time, status, notes)
-                    VALUES (?,?,?,?,?,?,?,?, 'PENDING',?)
+                    booking_date, start_time, end_time, status, notes, estimated_cost)
+                    VALUES (?,?,?,?,?,?,?,?, ?,?,?)
                     """;
             try (PreparedStatement ps = conn.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)) {
                 ps.setString(1, booking.getStudentName());
@@ -143,7 +154,9 @@ public class BookingServlet extends BaseHttpServlet {
                 ps.setObject(6, booking.getBookingDate());
                 ps.setObject(7, booking.getStartTime());
                 ps.setObject(8, booking.getEndTime());
-                ps.setString(9, booking.getNotes());
+                ps.setString(9, initialStatus);
+                ps.setString(10, booking.getNotes());
+                ps.setBigDecimal(11, estimatedCost);
                 ps.executeUpdate();
                 ResultSet keys = ps.getGeneratedKeys();
                 keys.next();
@@ -244,7 +257,7 @@ public class BookingServlet extends BaseHttpServlet {
     }
 
     private static Optional<Facility> loadFacility(Connection conn, long id) throws java.sql.SQLException {
-        String sql = "SELECT id, name, type, description, is_active, created_at FROM facilities WHERE id = ?";
+        String sql = "SELECT id, name, type, description, is_active, open_time, close_time, cost_per_hour, created_at FROM facilities WHERE id = ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setLong(1, id);
             try (ResultSet rs = ps.executeQuery()) {

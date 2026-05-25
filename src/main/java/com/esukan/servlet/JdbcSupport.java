@@ -6,6 +6,7 @@ import com.esukan.model.EquipmentRental;
 import com.esukan.model.Facility;
 import com.esukan.model.Payment;
 import com.esukan.model.Tournament;
+import com.esukan.model.TournamentMatch;
 import com.esukan.model.TournamentRegistration;
 import com.esukan.model.User;
 
@@ -39,6 +40,14 @@ public final class JdbcSupport {
         }
         f.setDescription(rs.getString(prefix + "description"));
         f.setIsActive(rs.getBoolean(prefix + "is_active"));
+        try {
+            f.setOpenTime(rs.getObject(prefix + "open_time", LocalTime.class));
+            f.setCloseTime(rs.getObject(prefix + "close_time", LocalTime.class));
+            BigDecimal cph = rs.getBigDecimal(prefix + "cost_per_hour");
+            f.setCostPerHour(cph != null ? cph : BigDecimal.ZERO);
+        } catch (SQLException ignored) {
+            f.setCostPerHour(BigDecimal.ZERO);
+        }
         f.setCreatedAt(ts(rs.getTimestamp(prefix + "created_at")));
         return f;
     }
@@ -58,6 +67,12 @@ public final class JdbcSupport {
         }
         e.setQuantity(rs.getInt(prefix + "quantity"));
         e.setDescription(rs.getString(prefix + "description"));
+        try {
+            BigDecimal cph = rs.getBigDecimal(prefix + "cost_per_hour");
+            e.setCostPerHour(cph != null ? cph : BigDecimal.ZERO);
+        } catch (SQLException ignored) {
+            e.setCostPerHour(BigDecimal.ZERO);
+        }
         e.setLastUpdated(ts(rs.getTimestamp(prefix + "last_updated")));
         return e;
     }
@@ -98,6 +113,13 @@ public final class JdbcSupport {
         }
         b.setNotes(rs.getString("br_notes"));
         b.setCreatedAt(ts(rs.getTimestamp("br_created_at")));
+        try {
+            BigDecimal est = rs.getBigDecimal("br_estimated_cost");
+            b.setEstimatedCost(est != null ? est : BigDecimal.ZERO);
+            b.setPaymentStatus(rs.getString("payment_status"));
+        } catch (SQLException ignored) {
+            b.setEstimatedCost(BigDecimal.ZERO);
+        }
         b.setFacility(mapFacility(rs, "f_"));
         Long uid = rs.getLong("br_user_id");
         if (!rs.wasNull()) {
@@ -146,6 +168,14 @@ public final class JdbcSupport {
         if (st != null) {
             t.setStatus(Tournament.TournamentStatus.valueOf(st.trim()));
         }
+        try {
+            String fmt = rs.getString("format");
+            if (fmt != null && !fmt.isBlank()) {
+                t.setFormat(Tournament.TournamentFormat.valueOf(fmt.trim()));
+            }
+        } catch (SQLException ignored) {
+            t.setFormat(Tournament.TournamentFormat.SINGLE_ELIMINATION);
+        }
         t.setCreatedAt(ts(rs.getTimestamp("t_created_at")));
         t.setOrganizer(mapUserShallow(rs, "o_"));
         Long vf = rs.getLong("venue_facility_id");
@@ -179,7 +209,18 @@ public final class JdbcSupport {
     public static Payment mapPayment(ResultSet rs) throws SQLException {
         Payment p = new Payment();
         p.setId(rs.getLong("id"));
-        p.setRentalId(rs.getLong("rental_id"));
+        long rentalId = rs.getLong("rental_id");
+        if (!rs.wasNull()) {
+            p.setRentalId(rentalId);
+        }
+        try {
+            long bookingId = rs.getLong("booking_id");
+            if (!rs.wasNull()) {
+                p.setBookingId(bookingId);
+            }
+        } catch (SQLException ignored) {
+            // column may be absent on older DB
+        }
         String m = rs.getString("method");
         if (m != null) {
             String norm = m.trim().replace('-', '_');
@@ -193,5 +234,40 @@ public final class JdbcSupport {
         p.setPaidAt(ts(rs.getTimestamp("paid_at")));
         p.setCreatedAt(ts(rs.getTimestamp("created_at")));
         return p;
+    }
+
+    public static TournamentMatch mapTournamentMatch(ResultSet rs) throws SQLException {
+        TournamentMatch m = new TournamentMatch();
+        m.setId(rs.getLong("id"));
+        m.setTournamentId(rs.getLong("tournament_id"));
+        m.setRoundNumber(rs.getInt("round_number"));
+        m.setMatchIndex(rs.getInt("match_index"));
+        m.setSlotLabel(rs.getString("slot_label"));
+        long ta = rs.getLong("team_a_registration_id");
+        if (!rs.wasNull()) {
+            m.setTeamARegistrationId(ta);
+        }
+        long tb = rs.getLong("team_b_registration_id");
+        if (!rs.wasNull()) {
+            m.setTeamBRegistrationId(tb);
+        }
+        long w = rs.getLong("winner_registration_id");
+        if (!rs.wasNull()) {
+            m.setWinnerRegistrationId(w);
+        }
+        m.setTeamAName(rs.getString("team_a_name"));
+        m.setTeamBName(rs.getString("team_b_name"));
+        m.setWinnerName(rs.getString("winner_name"));
+        String st = rs.getString("status");
+        if (st != null) {
+            m.setStatus(TournamentMatch.MatchStatus.valueOf(st.trim()));
+        }
+        long nm = rs.getLong("next_match_id");
+        if (!rs.wasNull()) {
+            m.setNextMatchId(nm);
+        }
+        m.setNextMatchSlot(rs.getString("next_match_slot"));
+        m.setCreatedAt(ts(rs.getTimestamp("created_at")));
+        return m;
     }
 }
