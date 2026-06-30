@@ -5,9 +5,6 @@ import com.esukan.model.Equipment;
 import com.esukan.model.EquipmentRental;
 import com.esukan.model.Facility;
 import com.esukan.model.Payment;
-import com.esukan.model.Tournament;
-import com.esukan.model.TournamentMatch;
-import com.esukan.model.TournamentRegistration;
 import com.esukan.model.User;
 
 import java.math.BigDecimal;
@@ -157,54 +154,6 @@ public final class JdbcSupport {
         return r;
     }
 
-    public static Tournament mapTournamentJoined(ResultSet rs) throws SQLException {
-        Tournament t = new Tournament();
-        t.setId(rs.getLong("t_id"));
-        t.setTitle(rs.getString("t_title"));
-        t.setDescription(rs.getString("t_description"));
-        t.setStartDate(rs.getObject("start_date", LocalDate.class));
-        t.setEndDate(rs.getObject("end_date", LocalDate.class));
-        String st = rs.getString("t_status");
-        if (st != null) {
-            t.setStatus(Tournament.TournamentStatus.valueOf(st.trim()));
-        }
-        try {
-            String fmt = rs.getString("format");
-            if (fmt != null && !fmt.isBlank()) {
-                t.setFormat(Tournament.TournamentFormat.valueOf(fmt.trim()));
-            }
-        } catch (SQLException ignored) {
-            t.setFormat(Tournament.TournamentFormat.SINGLE_ELIMINATION);
-        }
-        t.setCreatedAt(ts(rs.getTimestamp("t_created_at")));
-        t.setOrganizer(mapUserShallow(rs, "o_"));
-        Long vf = rs.getLong("venue_facility_id");
-        if (!rs.wasNull() && rs.getString("vf_name") != null) {
-            Facility f = new Facility();
-            f.setId(vf);
-            f.setName(rs.getString("vf_name"));
-            String tp = rs.getString("vf_type");
-            if (tp != null) {
-                f.setType(Facility.FacilityType.valueOf(tp.trim()));
-            }
-            t.setVenueFacility(f);
-        }
-        return t;
-    }
-
-    public static TournamentRegistration mapRegistrationJoined(ResultSet rs) throws SQLException {
-        TournamentRegistration reg = new TournamentRegistration();
-        reg.setId(rs.getLong("reg_id"));
-        reg.setTeamName(rs.getString("reg_team_name"));
-        reg.setContactEmail(rs.getString("reg_contact_email"));
-        reg.setCreatedAt(ts(rs.getTimestamp("reg_created_at")));
-        User by = new User();
-        by.setId(rs.getLong("rb_id"));
-        by.setUsername(rs.getString("rb_username"));
-        by.setFullName(rs.getString("rb_full_name"));
-        reg.setRegisteredBy(by);
-        return reg;
-    }
 
     public static Payment mapPayment(ResultSet rs) throws SQLException {
         Payment p = new Payment();
@@ -236,38 +185,4 @@ public final class JdbcSupport {
         return p;
     }
 
-    public static TournamentMatch mapTournamentMatch(ResultSet rs) throws SQLException {
-        TournamentMatch m = new TournamentMatch();
-        m.setId(rs.getLong("id"));
-        m.setTournamentId(rs.getLong("tournament_id"));
-        m.setRoundNumber(rs.getInt("round_number"));
-        m.setMatchIndex(rs.getInt("match_index"));
-        m.setSlotLabel(rs.getString("slot_label"));
-        long ta = rs.getLong("team_a_registration_id");
-        if (!rs.wasNull()) {
-            m.setTeamARegistrationId(ta);
-        }
-        long tb = rs.getLong("team_b_registration_id");
-        if (!rs.wasNull()) {
-            m.setTeamBRegistrationId(tb);
-        }
-        long w = rs.getLong("winner_registration_id");
-        if (!rs.wasNull()) {
-            m.setWinnerRegistrationId(w);
-        }
-        m.setTeamAName(rs.getString("team_a_name"));
-        m.setTeamBName(rs.getString("team_b_name"));
-        m.setWinnerName(rs.getString("winner_name"));
-        String st = rs.getString("status");
-        if (st != null) {
-            m.setStatus(TournamentMatch.MatchStatus.valueOf(st.trim()));
-        }
-        long nm = rs.getLong("next_match_id");
-        if (!rs.wasNull()) {
-            m.setNextMatchId(nm);
-        }
-        m.setNextMatchSlot(rs.getString("next_match_slot"));
-        m.setCreatedAt(ts(rs.getTimestamp("created_at")));
-        return m;
-    }
 }

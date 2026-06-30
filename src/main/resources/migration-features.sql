@@ -17,24 +17,3 @@ CREATE TABLE IF NOT EXISTS facility_equipment (
     FOREIGN KEY (equipment_id) REFERENCES equipment(id) ON DELETE CASCADE
 );
 
-ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS format VARCHAR(32) NOT NULL DEFAULT 'SINGLE_ELIMINATION';
-
-CREATE TABLE IF NOT EXISTS tournament_matches (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    tournament_id BIGINT NOT NULL,
-    round_number INT NOT NULL,
-    match_index INT NOT NULL,
-    slot_label VARCHAR(32),
-    team_a_registration_id BIGINT NULL,
-    team_b_registration_id BIGINT NULL,
-    winner_registration_id BIGINT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'SCHEDULED',
-    next_match_id BIGINT NULL,
-    next_match_slot CHAR(1) NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
-    FOREIGN KEY (team_a_registration_id) REFERENCES tournament_registrations(id),
-    FOREIGN KEY (team_b_registration_id) REFERENCES tournament_registrations(id),
-    FOREIGN KEY (winner_registration_id) REFERENCES tournament_registrations(id),
-    FOREIGN KEY (next_match_id) REFERENCES tournament_matches(id)
-);

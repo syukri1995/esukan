@@ -35,47 +35,6 @@ public final class SchemaMigration {
         }
         seedSettingsIfEmpty(conn);
         ensureBookingPaymentSchema(conn);
-        ensureTournamentSchema(conn);
-    }
-
-    public static void ensureTournamentSchema(Connection conn) throws SQLException {
-        if (!columnExists(conn, "tournaments", "format")) {
-            exec(conn, "ALTER TABLE tournaments ADD COLUMN format VARCHAR(32) NOT NULL DEFAULT 'SINGLE_ELIMINATION'");
-        }
-        if (!columnExists(conn, "tournaments", "venue_facility_id")) {
-            exec(conn, "ALTER TABLE tournaments ADD COLUMN venue_facility_id BIGINT NULL");
-        }
-        execIgnore(conn, """
-                CREATE TABLE IF NOT EXISTS tournament_matches (
-                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                    tournament_id BIGINT NOT NULL,
-                    round_number INT NOT NULL,
-                    match_index INT NOT NULL,
-                    slot_label VARCHAR(32),
-                    team_a_registration_id BIGINT NULL,
-                    team_b_registration_id BIGINT NULL,
-                    winner_registration_id BIGINT NULL,
-                    status VARCHAR(20) NOT NULL DEFAULT 'SCHEDULED',
-                    next_match_id BIGINT NULL,
-                    next_match_slot CHAR(1) NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE
-                )
-                """);
-        ensureTournamentTeamMembersTable(conn);
-    }
-
-    public static void ensureTournamentTeamMembersTable(Connection conn) throws SQLException {
-        execIgnore(conn, """
-                CREATE TABLE IF NOT EXISTS tournament_team_members (
-                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                    registration_id BIGINT NOT NULL,
-                    display_name VARCHAR(120) NOT NULL,
-                    email VARCHAR(120),
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (registration_id) REFERENCES tournament_registrations(id) ON DELETE CASCADE
-                )
-                """);
     }
 
     private static void execIgnore(Connection conn, String sql) {

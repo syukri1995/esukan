@@ -7,7 +7,6 @@ let allBookings = [];
 let allEquipment = [];
 let allFacilities = [];
 let allRentals = [];
-let allTournaments = [];
 let allUsers = [];
 let currentStatusTarget = null;
 
@@ -60,12 +59,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         hintR.textContent = `Renting as ${currentUser.fullName}`;
     }
 
-    if (isLecturer() || isAdmin()) {
-        const tb = document.getElementById('tournamentToolbar');
-        if (tb) {
-            tb.style.display = 'flex';
-        }
-    }
+
 
     initNav();
     loadDashboard();
@@ -73,14 +67,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('bookingForm').addEventListener('submit', submitBooking);
     document.getElementById('rentalForm').addEventListener('submit', submitRental);
-    const tf = document.getElementById('tournamentForm');
-    if (tf) {
-        tf.addEventListener('submit', submitTournament);
-    }
-    const rf = document.getElementById('registerTeamForm');
-    if (rf) {
-        rf.addEventListener('submit', submitRegisterTeam);
-    }
+
     const uf = document.getElementById('userCreateForm');
     if (uf) {
         uf.addEventListener('submit', submitCreateUser);
@@ -134,7 +121,6 @@ function navigateTo(page) {
         equipment: 'Equipment',
         rentals: 'Rentals',
         returned: 'Returned equipment',
-        tournaments: 'Tournaments',
         users: 'Users'
     };
     document.getElementById('pageTitle').textContent = titles[page] || page;
@@ -142,9 +128,6 @@ function navigateTo(page) {
     const btn = document.getElementById('topbarActionBtn');
     if (page === 'rentals') {
         btn.textContent = '+ New Rental';
-        btn.style.display = '';
-    } else if (page === 'tournaments' && (isLecturer() || isAdmin())) {
-        btn.textContent = '+ New Tournament';
         btn.style.display = '';
     } else if (page === 'users') {
         btn.style.display = 'none';
@@ -173,9 +156,7 @@ function navigateTo(page) {
         case 'returned':
             loadReturned();
             break;
-        case 'tournaments':
-            loadTournaments();
-            break;
+
         case 'users':
             loadUsers();
             break;
@@ -186,8 +167,6 @@ function openPrimaryAction() {
     const activePage = document.querySelector('.nav-item.active')?.dataset.page;
     if (activePage === 'rentals') {
         openRentalModal();
-    } else if (activePage === 'tournaments' && (isLecturer() || isAdmin())) {
-        openTournamentModal();
     } else {
         openBookingModal();
     }
@@ -626,149 +605,6 @@ async function loadReturned() {
             </tr>`).join('');
     } catch (err) {
         tbody.innerHTML = '<tr><td colspan="6" class="loading-msg">Failed to load</td></tr>';
-    }
-}
-
-// =============================================
-// TOURNAMENTS
-// =============================================
-async function loadTournaments() {
-    const tbody = document.getElementById('tournamentsTableBody');
-    tbody.innerHTML = '<tr><td colspan="5" class="loading-msg">Loading...</td></tr>';
-    try {
-        allTournaments = await authFetch('/api/tournaments').then(r => r.json());
-        if (allTournaments.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="loading-msg">No tournaments</td></tr>';
-            return;
-        }
-        tbody.innerHTML = allTournaments.map(t => {
-            const org = t.organizer?.fullName || t.organizer?.username || '—';
-            const canEdit = isAdmin() || (t.organizer && t.organizer.id === currentUser.id);
-            return `
-            <tr>
-                <td><strong>${t.title}</strong><div style="font-size:12px;color:var(--text3);max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.description || ''}</div></td>
-                <td>${t.startDate} → ${t.endDate}</td>
-                <td><span class="badge badge-gray">${t.status}</span></td>
-                <td>${org}</td>
-                <td>
-                    <div style="display:flex;gap:6px;flex-wrap:wrap">
-                        ${isStudent() && t.status === 'OPEN' ? `<button class="btn-icon btn-confirm" onclick="openRegisterTeam(${t.id})">Register</button>` : ''}
-                        ${canEdit ? `
-                            <button class="btn-icon" onclick="editTournamentStatus(${t.id},'OPEN')">Publish</button>
-                            <button class="btn-icon" onclick="editTournamentStatus(${t.id},'CLOSED')">Close</button>
-                            <button class="btn-icon btn-cancel" onclick="deleteTournament(${t.id})">🗑</button>
-                        ` : ''}
-                        ${canEdit || isAdmin() ? `<button class="btn-icon" onclick="viewRegistrations(${t.id})">Teams</button>` : ''}
-                    </div>
-                </td>
-            </tr>`;
-        }).join('');
-    } catch (err) {
-        tbody.innerHTML = '<tr><td colspan="5" class="loading-msg">Failed to load</td></tr>';
-    }
-}
-
-function openTournamentModal() {
-    document.getElementById('tournamentError').classList.remove('visible');
-    document.getElementById('tournamentForm').reset();
-    const t = new Date().toISOString().split('T')[0];
-    document.getElementById('tStart').value = t;
-    document.getElementById('tEnd').value = t;
-    openModal('tournamentModal');
-}
-
-async function submitTournament(e) {
-    e.preventDefault();
-    const errEl = document.getElementById('tournamentError');
-    errEl.classList.remove('visible');
-    const body = {
-        title: document.getElementById('tTitle').value.trim(),
-        description: document.getElementById('tDesc').value.trim(),
-        startDate: document.getElementById('tStart').value,
-        endDate: document.getElementById('tEnd').value,
-        status: document.getElementById('tStatus').value
-    };
-    const res = await authFetch('/api/tournaments', { method: 'POST', body: JSON.stringify(body) });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-        errEl.textContent = data.error || 'Failed';
-        errEl.classList.add('visible');
-        return;
-    }
-    showToast('Tournament created');
-    closeModal();
-    loadTournaments();
-}
-
-async function editTournamentStatus(id, status) {
-    try {
-        const t = allTournaments.find(x => x.id === id);
-        const body = {
-            title: t.title,
-            description: t.description,
-            startDate: t.startDate,
-            endDate: t.endDate,
-            status
-        };
-        await authFetch(`/api/tournaments/${id}`, { method: 'PUT', body: JSON.stringify(body) });
-        showToast('Tournament updated');
-        loadTournaments();
-    } catch (err) {
-        showToast('Update failed', true);
-    }
-}
-
-async function deleteTournament(id) {
-    if (!confirm('Delete this tournament?')) {
-        return;
-    }
-    const res = await authFetch(`/api/tournaments/${id}`, { method: 'DELETE' });
-    if (!res.ok) {
-        showToast('Delete failed', true);
-        return;
-    }
-    showToast('Deleted');
-    loadTournaments();
-}
-
-function openRegisterTeam(tournamentId) {
-    document.getElementById('registerTeamError').classList.remove('visible');
-    document.getElementById('regTournamentId').value = tournamentId;
-    document.getElementById('regTeamName').value = '';
-    document.getElementById('regTeamEmail').value = currentUser.email || '';
-    openModal('registerTeamModal');
-}
-
-async function submitRegisterTeam(e) {
-    e.preventDefault();
-    const errEl = document.getElementById('registerTeamError');
-    errEl.classList.remove('visible');
-    const id = document.getElementById('regTournamentId').value;
-    const res = await authFetch(`/api/tournaments/${id}/registrations`, {
-        method: 'POST',
-        body: JSON.stringify({
-            teamName: document.getElementById('regTeamName').value.trim(),
-            contactEmail: document.getElementById('regTeamEmail').value.trim()
-        })
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-        errEl.textContent = data.error || 'Failed';
-        errEl.classList.add('visible');
-        return;
-    }
-    showToast('Team registered');
-    closeModal();
-}
-
-async function viewRegistrations(tournamentId) {
-    try {
-        const res = await authFetch(`/api/tournaments/${tournamentId}/registrations`);
-        const list = await res.json();
-        const msg = list.length === 0 ? 'No teams yet.' : list.map(r => `• ${r.teamName} (${r.contactEmail || ''})`).join('\n');
-        alert(msg);
-    } catch (err) {
-        showToast('Could not load teams', true);
     }
 }
 

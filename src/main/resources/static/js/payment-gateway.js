@@ -332,11 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { src: '/js/modal-fix.js', key: 'modalFix' },
         { src: '/js/booking-hours-fix.js', key: 'bookingHoursFix' },
         { src: '/js/booking-payment-ui.js', key: 'bookingPaymentUi' },
-        { src: '/js/booking-pricing-ui.js', key: 'bookingPricingUi' },
-        { src: '/js/tournament-fix.js', key: 'tournamentFix' },
-        { src: '/js/tournament-team-match.js', key: 'tournamentTeamMatch' },
-        { src: '/js/tournament-match-ui.js', key: 'tournamentMatchUi' },
-        { src: '/js/tournament-ux-fixes.js', key: 'tournamentUxFixes' }
+        { src: '/js/booking-pricing-ui.js', key: 'bookingPricingUi' }
     ];
     function loadNext(i, done) {
         if (i >= chain.length) {
@@ -358,9 +354,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.appendChild(s);
     }
     if (document.querySelector('script[data-features-ui]')) {
-        if (!document.querySelector('script[data-tournament-team-match]')) {
-            loadNext(chain.findIndex(c => c.key === 'tournamentTeamMatch'), null);
-        }
         return;
     }
     loadNext(0, null);
