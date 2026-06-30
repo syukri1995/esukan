@@ -1,0 +1,220 @@
+@startuml esukan-erd
+' E-Sukan database ERD with orthogonal (hard-corner) relationship lines
+!pragma layout elk
+skinparam linetype ortho
+skinparam linetype polyline
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam classFontSize 10
+skinparam classAttributeFontSize 9
+skinparam ArrowColor #666666
+skinparam classBorderColor #284878
+skinparam classBackgroundColor #F8FAFC
+skinparam classHeaderBackgroundColor #284878
+skinparam classFontColor #111111
+skinparam classAttributeFontColor #222222
+skinparam dpi 200
+
+hide circle
+hide empty members
+
+entity "system_settings" as system_settings {
+  * setting_key : varchar <<PK>>
+  --
+  setting_value : varchar
+}
+
+entity "users" as users {
+  * id : bigint <<PK>>
+  --
+  username : varchar <<UK>>
+  email : varchar <<UK>>
+  password_hash : varchar
+  role : enum
+  full_name : varchar
+  student_id_number : varchar
+  enabled : boolean
+  created_at : timestamp
+}
+
+entity "password_reset_tokens" as password_reset_tokens {
+  * id : bigint <<PK>>
+  --
+  token : varchar <<UK>>
+  user_id : bigint <<FK>>
+  expires_at : timestamp
+  used_at : timestamp
+}
+
+entity "facilities" as facilities {
+  * id : bigint <<PK>>
+  --
+  name : varchar
+  type : enum
+  description : varchar
+  is_active : boolean
+  open_time : time
+  close_time : time
+  cost_per_hour : decimal
+  created_at : timestamp
+}
+
+entity "equipment" as equipment {
+  * id : bigint <<PK>>
+  --
+  name : varchar
+  category : varchar
+  status : enum
+  quantity : int
+  description : varchar
+  cost_per_hour : decimal
+  last_updated : timestamp
+}
+
+entity "facility_equipment" as facility_equipment {
+  * facility_id : bigint <<PK,FK>>
+  * equipment_id : bigint <<PK,FK>>
+}
+
+entity "bookings" as bookings {
+  * id : bigint <<PK>>
+  --
+  student_name : varchar
+  student_id : varchar
+  student_email : varchar
+  facility_id : bigint <<FK>>
+  user_id : bigint <<FK>>
+  booking_date : date
+  start_time : time
+  end_time : time
+  status : enum
+  notes : varchar
+  estimated_cost : decimal
+  created_at : timestamp
+}
+
+entity "booking_waitlist" as booking_waitlist {
+  * id : bigint <<PK>>
+  --
+  student_name : varchar
+  student_id : varchar
+  student_email : varchar
+  facility_id : bigint <<FK>>
+  user_id : bigint <<FK>>
+  booking_date : date
+  start_time : time
+  end_time : time
+  status : enum
+  notes : varchar
+  promoted_booking_id : bigint
+  created_at : timestamp
+}
+
+entity "equipment_rentals" as equipment_rentals {
+  * id : bigint <<PK>>
+  --
+  student_name : varchar
+  student_id : varchar
+  equipment_id : bigint <<FK>>
+  user_id : bigint <<FK>>
+  quantity : int
+  rental_date : date
+  return_date : date
+  status : enum
+  deposit_amount : decimal
+  created_at : timestamp
+}
+
+entity "payments" as payments {
+  * id : bigint <<PK>>
+  --
+  rental_id : bigint <<FK>>
+  booking_id : bigint <<FK>>
+  method : enum
+  amount : decimal
+  status : enum
+  paid_at : timestamp
+  created_at : timestamp
+}
+
+entity "tournaments" as tournaments {
+  * id : bigint <<PK>>
+  --
+  title : varchar
+  description : varchar
+  start_date : date
+  end_date : date
+  status : enum
+  format : enum
+  organizer_id : bigint <<FK>>
+  venue_facility_id : bigint <<FK>>
+  created_at : timestamp
+}
+
+entity "tournament_registrations" as tournament_registrations {
+  * id : bigint <<PK>>
+  --
+  tournament_id : bigint <<FK>>
+  team_name : varchar
+  contact_email : varchar
+  registered_by_user_id : bigint <<FK>>
+  created_at : timestamp
+}
+
+entity "tournament_team_members" as tournament_team_members {
+  * id : bigint <<PK>>
+  --
+  registration_id : bigint <<FK>>
+  display_name : varchar
+  email : varchar
+  created_at : timestamp
+}
+
+entity "tournament_matches" as tournament_matches {
+  * id : bigint <<PK>>
+  --
+  tournament_id : bigint <<FK>>
+  round_number : int
+  match_index : int
+  slot_label : varchar
+  team_a_registration_id : bigint <<FK>>
+  team_b_registration_id : bigint <<FK>>
+  winner_registration_id : bigint <<FK>>
+  status : enum
+  next_match_id : bigint <<FK>>
+  next_match_slot : char
+  created_at : timestamp
+}
+
+' Auth
+users ||--o{ password_reset_tokens : has
+
+' Bookings and rentals
+users ||--o{ bookings : creates
+users ||--o{ booking_waitlist : joins
+users ||--o{ equipment_rentals : rents
+facilities ||--o{ bookings : booked
+facilities ||--o{ booking_waitlist : waitlisted
+equipment ||--o{ equipment_rentals : rented
+
+' Facility-equipment junction
+facilities ||--o{ facility_equipment : offers
+equipment ||--o{ facility_equipment : available_at
+
+' Payments
+bookings ||--o{ payments : paid_via
+equipment_rentals ||--o{ payments : paid_via
+
+' Tournaments
+users ||--o{ tournaments : organizes
+facilities ||--o{ tournaments : hosts
+tournaments ||--o{ tournament_registrations : has
+users ||--o{ tournament_registrations : registers
+tournament_registrations ||--o{ tournament_team_members : includes
+tournaments ||--o{ tournament_matches : contains
+tournament_registrations ||--o{ tournament_matches : team_a
+tournament_registrations ||--o{ tournament_matches : team_b
+tournament_registrations ||--o{ tournament_matches : winner
+tournament_matches ||--o| tournament_matches : next_match
+
+@enduml

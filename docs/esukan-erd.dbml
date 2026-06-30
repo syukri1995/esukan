@@ -1,0 +1,226 @@
+// E-Sukan Database (esukan_db)
+// Paste into https://dbdiagram.io
+// Docs: https://dbml.dbdiagram.io/docs
+
+Project esukan {
+  database_type: 'MySQL'
+  Note: 'E-Sukan facility booking, equipment rental, and tournament system'
+}
+
+// ---------------------------------------------------------------------------
+// Configuration
+// ---------------------------------------------------------------------------
+
+Table system_settings {
+  setting_key varchar(64) [primary key]
+  setting_value varchar(255) [not null]
+}
+
+// ---------------------------------------------------------------------------
+// Facilities & equipment
+// ---------------------------------------------------------------------------
+
+Table facilities {
+  id bigint [primary key, increment]
+  name varchar(100) [not null]
+  type varchar(20) [not null, note: 'BADMINTON | FUTSAL']
+  description varchar(255)
+  is_active boolean [default: true]
+  open_time time
+  close_time time
+  cost_per_hour decimal(10,2) [not null, default: 0]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+Table equipment {
+  id bigint [primary key, increment]
+  name varchar(100) [not null]
+  category varchar(100) [not null]
+  status varchar(30) [default: 'AVAILABLE', note: 'AVAILABLE | DAMAGED | IN_MAINTENANCE']
+  quantity int [default: 1]
+  description varchar(255)
+  cost_per_hour decimal(10,2) [not null, default: 0]
+  last_updated timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+Table facility_equipment {
+  facility_id bigint [not null]
+  equipment_id bigint [not null]
+
+  indexes {
+    (facility_id, equipment_id) [pk]
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Users & auth
+// ---------------------------------------------------------------------------
+
+Table users {
+  id bigint [primary key, increment]
+  username varchar(64) [not null, unique]
+  email varchar(120) [not null, unique]
+  password_hash varchar(120) [not null]
+  role varchar(20) [not null, note: 'STUDENT | LECTURER | ADMIN']
+  full_name varchar(120) [not null]
+  student_id_number varchar(32)
+  enabled boolean [default: true]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+Table password_reset_tokens {
+  id bigint [primary key, increment]
+  token varchar(64) [not null, unique]
+  user_id bigint [not null]
+  expires_at timestamp [not null]
+  used_at timestamp
+}
+
+// ---------------------------------------------------------------------------
+// Bookings & rentals
+// ---------------------------------------------------------------------------
+
+Table bookings {
+  id bigint [primary key, increment]
+  student_name varchar(100) [not null]
+  student_id varchar(20) [not null]
+  student_email varchar(100) [not null]
+  facility_id bigint [not null]
+  user_id bigint [note: 'Optional linked account']
+  booking_date date [not null]
+  start_time time [not null]
+  end_time time [not null]
+  status varchar(20) [default: 'PENDING', note: 'PENDING | CONFIRMED | CANCELLED']
+  notes varchar(255)
+  estimated_cost decimal(10,2) [not null, default: 0]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+Table booking_waitlist {
+  id bigint [primary key, increment]
+  student_name varchar(100) [not null]
+  student_id varchar(20) [not null]
+  student_email varchar(100) [not null]
+  facility_id bigint [not null]
+  user_id bigint
+  booking_date date [not null]
+  start_time time [not null]
+  end_time time [not null]
+  status varchar(20) [default: 'WAITING', note: 'WAITING | PROMOTED | CANCELLED']
+  notes varchar(255)
+  promoted_booking_id bigint [note: 'Set when promoted to a booking']
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+Table equipment_rentals {
+  id bigint [primary key, increment]
+  student_name varchar(100) [not null]
+  student_id varchar(20) [not null]
+  equipment_id bigint [not null]
+  user_id bigint
+  quantity int [default: 1]
+  rental_date date [not null]
+  return_date date
+  status varchar(20) [default: 'ACTIVE', note: 'ACTIVE | RETURNED | OVERDUE']
+  deposit_amount decimal(10,2) [not null, default: 50]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+Table payments {
+  id bigint [primary key, increment]
+  rental_id bigint
+  booking_id bigint
+  method varchar(30) [not null, note: 'CASH | ONLINE_BANKING | E_WALLET | CARD']
+  amount decimal(10,2) [not null]
+  status varchar(20) [default: 'PENDING', note: 'PENDING | PAID | FAILED']
+  paid_at timestamp
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+// ---------------------------------------------------------------------------
+// Tournaments
+// ---------------------------------------------------------------------------
+
+Table tournaments {
+  id bigint [primary key, increment]
+  title varchar(160) [not null]
+  description varchar(2000)
+  start_date date [not null]
+  end_date date [not null]
+  status varchar(20) [not null, default: 'DRAFT', note: 'DRAFT | OPEN | CLOSED | COMPLETED']
+  format varchar(32) [not null, default: 'SINGLE_ELIMINATION', note: 'SINGLE_ELIMINATION | ROUND_ROBIN']
+  organizer_id bigint [not null]
+  venue_facility_id bigint
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+Table tournament_registrations {
+  id bigint [primary key, increment]
+  tournament_id bigint [not null]
+  team_name varchar(120) [not null]
+  contact_email varchar(120)
+  registered_by_user_id bigint [not null]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+
+  indexes {
+    (tournament_id, team_name) [unique]
+  }
+}
+
+Table tournament_team_members {
+  id bigint [primary key, increment]
+  registration_id bigint [not null]
+  display_name varchar(120) [not null]
+  email varchar(120)
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+Table tournament_matches {
+  id bigint [primary key, increment]
+  tournament_id bigint [not null]
+  round_number int [not null]
+  match_index int [not null]
+  slot_label varchar(32)
+  team_a_registration_id bigint
+  team_b_registration_id bigint
+  winner_registration_id bigint
+  status varchar(20) [not null, default: 'SCHEDULED', note: 'SCHEDULED | COMPLETED']
+  next_match_id bigint [note: 'Bracket: winner advances to this match']
+  next_match_slot char(1) [note: 'A or B slot in next match']
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+// ---------------------------------------------------------------------------
+// Relationships (one-to-many: parent.id < child.fk)
+// ---------------------------------------------------------------------------
+
+Ref: facility_equipment.facility_id > facilities.id [delete: cascade]
+Ref: facility_equipment.equipment_id > equipment.id [delete: cascade]
+
+Ref: password_reset_tokens.user_id > users.id
+
+Ref: bookings.facility_id > facilities.id
+Ref: bookings.user_id > users.id
+
+Ref: booking_waitlist.facility_id > facilities.id
+Ref: booking_waitlist.user_id > users.id
+
+Ref: equipment_rentals.equipment_id > equipment.id
+Ref: equipment_rentals.user_id > users.id
+
+Ref: payments.rental_id > equipment_rentals.id
+Ref: payments.booking_id > bookings.id
+
+Ref: tournaments.organizer_id > users.id
+Ref: tournaments.venue_facility_id > facilities.id
+
+Ref: tournament_registrations.tournament_id > tournaments.id
+Ref: tournament_registrations.registered_by_user_id > users.id
+
+Ref: tournament_team_members.registration_id > tournament_registrations.id [delete: cascade]
+
+Ref: tournament_matches.tournament_id > tournaments.id [delete: cascade]
+Ref: tournament_matches.team_a_registration_id > tournament_registrations.id
+Ref: tournament_matches.team_b_registration_id > tournament_registrations.id
+Ref: tournament_matches.winner_registration_id > tournament_registrations.id
+Ref: tournament_matches.next_match_id > tournament_matches.id

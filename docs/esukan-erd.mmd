@@ -1,0 +1,181 @@
+erDiagram
+    system_settings {
+        varchar setting_key PK
+        varchar setting_value
+    }
+
+    users {
+        bigint id PK
+        varchar username UK
+        varchar email UK
+        varchar password_hash
+        enum role
+        varchar full_name
+        varchar student_id_number
+        boolean enabled
+        timestamp created_at
+    }
+
+    password_reset_tokens {
+        bigint id PK
+        varchar token UK
+        bigint user_id FK
+        timestamp expires_at
+        timestamp used_at
+    }
+
+    facilities {
+        bigint id PK
+        varchar name
+        enum type
+        varchar description
+        boolean is_active
+        time open_time
+        time close_time
+        decimal cost_per_hour
+        timestamp created_at
+    }
+
+    equipment {
+        bigint id PK
+        varchar name
+        varchar category
+        enum status
+        int quantity
+        varchar description
+        decimal cost_per_hour
+        timestamp last_updated
+    }
+
+    facility_equipment {
+        bigint facility_id PK_FK
+        bigint equipment_id PK_FK
+    }
+
+    bookings {
+        bigint id PK
+        varchar student_name
+        varchar student_id
+        varchar student_email
+        bigint facility_id FK
+        bigint user_id FK
+        date booking_date
+        time start_time
+        time end_time
+        enum status
+        varchar notes
+        decimal estimated_cost
+        timestamp created_at
+    }
+
+    booking_waitlist {
+        bigint id PK
+        varchar student_name
+        varchar student_id
+        varchar student_email
+        bigint facility_id FK
+        bigint user_id FK
+        date booking_date
+        time start_time
+        time end_time
+        enum status
+        varchar notes
+        bigint promoted_booking_id
+        timestamp created_at
+    }
+
+    equipment_rentals {
+        bigint id PK
+        varchar student_name
+        varchar student_id
+        bigint equipment_id FK
+        bigint user_id FK
+        int quantity
+        date rental_date
+        date return_date
+        enum status
+        decimal deposit_amount
+        timestamp created_at
+    }
+
+    payments {
+        bigint id PK
+        bigint rental_id FK
+        bigint booking_id FK
+        enum method
+        decimal amount
+        enum status
+        timestamp paid_at
+        timestamp created_at
+    }
+
+    tournaments {
+        bigint id PK
+        varchar title
+        varchar description
+        date start_date
+        date end_date
+        enum status
+        enum format
+        bigint organizer_id FK
+        bigint venue_facility_id FK
+        timestamp created_at
+    }
+
+    tournament_registrations {
+        bigint id PK
+        bigint tournament_id FK
+        varchar team_name
+        varchar contact_email
+        bigint registered_by_user_id FK
+        timestamp created_at
+    }
+
+    tournament_team_members {
+        bigint id PK
+        bigint registration_id FK
+        varchar display_name
+        varchar email
+        timestamp created_at
+    }
+
+    tournament_matches {
+        bigint id PK
+        bigint tournament_id FK
+        int round_number
+        int match_index
+        varchar slot_label
+        bigint team_a_registration_id FK
+        bigint team_b_registration_id FK
+        bigint winner_registration_id FK
+        enum status
+        bigint next_match_id FK
+        char next_match_slot
+        timestamp created_at
+    }
+
+    users ||--o{ password_reset_tokens : has
+    users ||--o{ bookings : creates
+    users ||--o{ booking_waitlist : joins
+    users ||--o{ equipment_rentals : rents
+    users ||--o{ tournaments : organizes
+    users ||--o{ tournament_registrations : registers
+
+    facilities ||--o{ facility_equipment : offers
+    equipment ||--o{ facility_equipment : available_at
+    facilities ||--o{ bookings : booked
+    facilities ||--o{ booking_waitlist : waitlisted
+    facilities ||--o{ tournaments : hosts
+
+    equipment ||--o{ equipment_rentals : rented
+
+    bookings ||--o{ payments : paid_via
+    equipment_rentals ||--o{ payments : paid_via
+
+    tournaments ||--o{ tournament_registrations : has
+    tournament_registrations ||--o{ tournament_team_members : includes
+    tournaments ||--o{ tournament_matches : contains
+    tournament_registrations ||--o{ tournament_matches : team_a
+    tournament_registrations ||--o{ tournament_matches : team_b
+    tournament_registrations ||--o{ tournament_matches : winner
+    tournament_matches ||--o| tournament_matches : next_match
