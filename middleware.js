@@ -40,17 +40,13 @@ export default async function middleware(request) {
     }
   }
 
-  let body = undefined;
-  if (request.method !== 'GET' && request.method !== 'HEAD') {
-    body = await request.text();
-  }
-
   try {
     return await fetch(target, {
       method: request.method,
       headers,
-      body,
+      body: request.method === 'GET' || request.method === 'HEAD' ? undefined : request.body,
       redirect: 'manual',
+      duplex: 'half'
     });
   } catch (err) {
     console.error(`Fetch failed for target: ${target}`, err);
