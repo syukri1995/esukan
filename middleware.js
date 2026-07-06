@@ -7,7 +7,7 @@ export const config = {
 };
 
 export default async function middleware(request) {
-  const backend = process.env.BACKEND_URL;
+  const backend = process.env.BACKEND_URL ? process.env.BACKEND_URL.trim() : null;
   if (!backend) {
     return new Response(
       JSON.stringify({
@@ -19,6 +19,8 @@ export default async function middleware(request) {
 
   const incoming = new URL(request.url);
   const target = `${backend.replace(/\/$/, '')}${incoming.pathname}${incoming.search}`;
+  console.log(`Proxying ${request.method} ${incoming.pathname} -> ${target}`);
+
   const headers = new Headers(request.headers);
   headers.delete('host');
   headers.delete('connection');
@@ -31,10 +33,15 @@ export default async function middleware(request) {
     body = await request.text();
   }
 
-  return fetch(target, {
-    method: request.method,
-    headers,
-    body,
-    redirect: 'manual',
-  });
+  try {
+    return await fetch(target, {
+      method: request.method,
+      headers,
+      body,
+      redirect: 'manual',
+    });
+  } catch (err) {
+    console.error(`Fetch failed for target: ${target}`, err);
+    throw err;
+  }
 }
