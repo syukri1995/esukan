@@ -99,6 +99,7 @@ CREATE TABLE IF NOT EXISTS equipment_rentals (
     user_id BIGINT NULL,
     quantity INT DEFAULT 1,
     rental_date DATE NOT NULL,
+    start_time TIME NULL,
     return_date DATE,
     status VARCHAR(20) DEFAULT 'ACTIVE',
     deposit_amount DECIMAL(10,2) NOT NULL DEFAULT 50.00,

@@ -3,6 +3,7 @@ package com.esukan.model;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 public class EquipmentRental {
 
@@ -17,6 +18,7 @@ public class EquipmentRental {
     private User user;
     private Integer quantity = 1;
     private LocalDate rentalDate;
+    private LocalTime startTime;
     private LocalDate returnDate;
     private RentalStatus status = RentalStatus.ACTIVE;
     private BigDecimal depositAmount = new BigDecimal("50.00");
@@ -78,6 +80,14 @@ public class EquipmentRental {
 
     public void setRentalDate(LocalDate rentalDate) {
         this.rentalDate = rentalDate;
+    }
+
+    public LocalTime getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(LocalTime startTime) {
+        this.startTime = startTime;
     }
 
     public LocalDate getReturnDate() {

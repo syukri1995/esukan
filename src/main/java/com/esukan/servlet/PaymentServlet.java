@@ -192,6 +192,9 @@ public class PaymentServlet extends BaseHttpServlet {
         if (pay.getBookingId() != null) {
             confirmBookingAfterPayment(conn, pay.getBookingId());
         }
+        if (pay.getRentalId() != null) {
+            returnRentalAfterPayment(conn, pay.getRentalId());
+        }
         
         String txnRef = pay.getReferenceId() != null ? pay.getReferenceId() : "ESP-" + pay.getCreatedAt().toLocalDate().format(DateTimeFormatter.BASIC_ISO_DATE) + "-"
                 + String.format("%05d", paymentId);
@@ -245,6 +248,9 @@ public class PaymentServlet extends BaseHttpServlet {
             markPaymentPaid(conn, paymentId);
             if (pay.get().getBookingId() != null) {
                 confirmBookingAfterPayment(conn, pay.get().getBookingId());
+            }
+            if (pay.get().getRentalId() != null) {
+                returnRentalAfterPayment(conn, pay.get().getRentalId());
             }
             ServletUtil.writeJson(resp, HttpServletResponse.SC_OK, findById(conn, paymentId).orElseThrow());
         } catch (Exception e) {
@@ -323,5 +329,13 @@ public class PaymentServlet extends BaseHttpServlet {
             }
         }
         return list;
+    }
+
+    private static void returnRentalAfterPayment(Connection conn, long rentalId) throws java.sql.SQLException {
+        try (PreparedStatement ps = conn.prepareStatement(
+                "UPDATE equipment_rentals SET status='RETURNED', return_date=CURRENT_DATE WHERE id=?")) {
+            ps.setLong(1, rentalId);
+            ps.executeUpdate();
+        }
     }
 }

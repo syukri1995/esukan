@@ -67,23 +67,38 @@ public class EsukanContextListener implements ServletContextListener {
     private static void seedIfEmpty(Connection conn) throws java.sql.SQLException {
         try (Statement st = conn.createStatement()) {
             if (count(conn, "SELECT COUNT(*) FROM facilities") == 0) {
-                st.executeUpdate("INSERT INTO facilities (name, type, description) VALUES "
-                        + "('Badminton Court 1', 'BADMINTON', 'Main badminton court near sports complex entrance'),"
-                        + "('Badminton Court 2', 'BADMINTON', 'Indoor badminton court with air conditioning'),"
-                        + "('Badminton Court 3', 'BADMINTON', 'Outdoor badminton court'),"
-                        + "('Futsal Court A', 'FUTSAL', 'Full-size futsal court with synthetic turf'),"
-                        + "('Futsal Court B', 'FUTSAL', 'Indoor futsal court, capacity 10 players')");
+                st.executeUpdate("INSERT INTO facilities (name, type, description, cost_per_hour) VALUES "
+                        + "('Badminton Court 1', 'BADMINTON', 'Main badminton court near sports complex entrance', 10.00),"
+                        + "('Badminton Court 2', 'BADMINTON', 'Indoor badminton court with air conditioning', 15.00),"
+                        + "('Badminton Court 3', 'BADMINTON', 'Outdoor badminton court', 8.00),"
+                        + "('Futsal Court A', 'FUTSAL', 'Full-size futsal court with synthetic turf', 25.00),"
+                        + "('Futsal Court B', 'FUTSAL', 'Indoor futsal court, capacity 10 players', 30.00)");
+            } else {
+                st.executeUpdate("UPDATE facilities SET cost_per_hour = 10.00 WHERE name = 'Badminton Court 1' AND cost_per_hour = 0.00");
+                st.executeUpdate("UPDATE facilities SET cost_per_hour = 15.00 WHERE name = 'Badminton Court 2' AND cost_per_hour = 0.00");
+                st.executeUpdate("UPDATE facilities SET cost_per_hour = 8.00 WHERE name = 'Badminton Court 3' AND cost_per_hour = 0.00");
+                st.executeUpdate("UPDATE facilities SET cost_per_hour = 25.00 WHERE name = 'Futsal Court A' AND cost_per_hour = 0.00");
+                st.executeUpdate("UPDATE facilities SET cost_per_hour = 30.00 WHERE name = 'Futsal Court B' AND cost_per_hour = 0.00");
             }
             if (count(conn, "SELECT COUNT(*) FROM equipment") == 0) {
-                st.executeUpdate("INSERT INTO equipment (name, category, status, quantity, description) VALUES "
-                        + "('Badminton Racket', 'Racket Sports', 'AVAILABLE', 20, 'Yonex standard rackets'),"
-                        + "('Shuttlecock (tube)', 'Racket Sports', 'AVAILABLE', 50, 'Feather shuttlecocks'),"
-                        + "('Futsal Ball', 'Ball Sports', 'AVAILABLE', 10, 'Size 4 futsal balls'),"
-                        + "('Goalkeeper Gloves', 'Protective Gear', 'AVAILABLE', 5, 'Standard goalkeeper gloves'),"
-                        + "('Knee Guard', 'Protective Gear', 'IN_MAINTENANCE', 8, 'Knee protection for futsal'),"
-                        + "('Bibs / Vests', 'Apparel', 'AVAILABLE', 30, 'Team differentiation bibs'),"
-                        + "('Score Counter', 'Accessories', 'DAMAGED', 2, 'Manual score counters'),"
-                        + "('Badminton Net', 'Court Equipment', 'AVAILABLE', 3, 'Portable badminton nets')");
+                st.executeUpdate("INSERT INTO equipment (name, category, status, quantity, description, cost_per_hour) VALUES "
+                        + "('Badminton Racket', 'Racket Sports', 'AVAILABLE', 20, 'Yonex standard rackets', 2.00),"
+                        + "('Shuttlecock (tube)', 'Racket Sports', 'AVAILABLE', 50, 'Feather shuttlecocks', 1.00),"
+                        + "('Futsal Ball', 'Ball Sports', 'AVAILABLE', 10, 'Size 4 futsal balls', 3.00),"
+                        + "('Goalkeeper Gloves', 'Protective Gear', 'AVAILABLE', 5, 'Standard goalkeeper gloves', 2.00),"
+                        + "('Knee Guard', 'Protective Gear', 'IN_MAINTENANCE', 8, 'Knee protection for futsal', 1.50),"
+                        + "('Bibs / Vests', 'Apparel', 'AVAILABLE', 30, 'Team differentiation bibs', 0.50),"
+                        + "('Score Counter', 'Accessories', 'DAMAGED', 2, 'Manual score counters', 1.00),"
+                        + "('Badminton Net', 'Court Equipment', 'AVAILABLE', 3, 'Portable badminton nets', 4.00)");
+            } else {
+                st.executeUpdate("UPDATE equipment SET cost_per_hour = 2.00 WHERE name = 'Badminton Racket' AND cost_per_hour = 0.00");
+                st.executeUpdate("UPDATE equipment SET cost_per_hour = 1.00 WHERE name = 'Shuttlecock (tube)' AND cost_per_hour = 0.00");
+                st.executeUpdate("UPDATE equipment SET cost_per_hour = 3.00 WHERE name = 'Futsal Ball' AND cost_per_hour = 0.00");
+                st.executeUpdate("UPDATE equipment SET cost_per_hour = 2.00 WHERE name = 'Goalkeeper Gloves' AND cost_per_hour = 0.00");
+                st.executeUpdate("UPDATE equipment SET cost_per_hour = 1.50 WHERE name = 'Knee Guard' AND cost_per_hour = 0.00");
+                st.executeUpdate("UPDATE equipment SET cost_per_hour = 0.50 WHERE name = 'Bibs / Vests' AND cost_per_hour = 0.00");
+                st.executeUpdate("UPDATE equipment SET cost_per_hour = 1.00 WHERE name = 'Score Counter' AND cost_per_hour = 0.00");
+                st.executeUpdate("UPDATE equipment SET cost_per_hour = 4.00 WHERE name = 'Badminton Net' AND cost_per_hour = 0.00");
             }
         }
         if (count(conn, "SELECT COUNT(*) FROM users") > 0) {

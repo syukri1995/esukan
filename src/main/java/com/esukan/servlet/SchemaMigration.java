@@ -58,6 +58,9 @@ public final class SchemaMigration {
         if (!columnExists(conn, "payments", "reference_id")) {
             exec(conn, "ALTER TABLE payments ADD COLUMN reference_id VARCHAR(50) NULL UNIQUE");
         }
+        if (!columnExists(conn, "equipment_rentals", "start_time")) {
+            exec(conn, "ALTER TABLE equipment_rentals ADD COLUMN start_time TIME NULL");
+        }
         relaxPaymentsRentalId(conn);
     }
 

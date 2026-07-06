@@ -91,36 +91,63 @@
             document.getElementById('receiptDetails').innerHTML = '<p style="color:red">No reference ID provided.</p>';
         } else {
             fetch(`/api/verify-payment/${refId}`)
-                .then(res => res.json())
+                .then(res => {
+                    if (!res.ok) {
+                        return res.json().then(err => { throw new Error(err.error || 'Server error'); });
+                    }
+                    return res.json();
+                })
                 .then(data => {
                     if (data.error) {
                         document.getElementById('receiptDetails').innerHTML = `<p style="color:red">${data.error}</p>`;
                         return;
                     }
 
+                    const amt = typeof data.amount === 'number' ? data.amount.toFixed(2) : data.amount;
+                    let dateStr = 'N/A';
+                    if (data.paidAt) {
+                        const parsedDate = new Date(data.paidAt);
+                        if (!isNaN(parsedDate.getTime())) {
+                            dateStr = parsedDate.toLocaleString();
+                        }
+                    }
+
                     const details = `
                         <div class="receipt-row"><span class="receipt-label">Ref ID:</span> <span>${data.referenceId}</span></div>
-                        <div class="receipt-row"><span class="receipt-label">Amount:</span> <span>RM ${data.amount.toFixed(2)}</span></div>
+                        <div class="receipt-row"><span class="receipt-label">Amount:</span> <span>RM ${amt}</span></div>
                         <div class="receipt-row"><span class="receipt-label">Method:</span> <span>${data.method || 'N/A'}</span></div>
-                        <div class="receipt-row"><span class="receipt-label">Date:</span> <span>${new Date(data.paidAt).toLocaleString()}</span></div>
+                        <div class="receipt-row"><span class="receipt-label">Date:</span> <span>${dateStr}</span></div>
                         <div class="receipt-row"><span class="receipt-label">For:</span> <span>${data.type === 'BOOKING' ? data.facilityName : data.equipmentName}</span></div>
                         <div class="receipt-row"><span class="receipt-label">Name:</span> <span>${data.studentName}</span></div>
                     `;
                     document.getElementById('receiptDetails').innerHTML = details;
 
                     const verifyUrl = window.location.origin + `/verify.html?ref=${refId}`;
-                    QRCode.toCanvas(verifyUrl, { width: 180, margin: 1 }, function (err, canvas) {
-                        if (err) console.error(err);
-                        else {
-                            const qrContainer = document.getElementById('qrcode');
-                            qrContainer.innerHTML = '';
-                            qrContainer.appendChild(canvas);
-                        }
-                    });
+                    if (typeof QRCode !== 'undefined') {
+                        QRCode.toCanvas(verifyUrl, { width: 180, margin: 1 }, function (err, canvas) {
+                            if (err) {
+                                console.error(err);
+                                showFallbackLink(verifyUrl);
+                            }
+                            else {
+                                const qrContainer = document.getElementById('qrcode');
+                                qrContainer.innerHTML = '';
+                                qrContainer.appendChild(canvas);
+                            }
+                        });
+                    } else {
+                        showFallbackLink(verifyUrl);
+                    }
                 })
                 .catch(err => {
-                    document.getElementById('receiptDetails').innerHTML = '<p style="color:red">Failed to load receipt.</p>';
+                    console.error(err);
+                    document.getElementById('receiptDetails').innerHTML = `<p style="color:red">Failed to load receipt: ${err.message || err}</p>`;
                 });
+        }
+
+        function showFallbackLink(url) {
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = `<p style="font-size:14px;margin:10px 0;"><a href="${url}" target="_blank" style="color:#2c3e50;font-weight:bold;text-decoration:underline;">Click here to verify payment status online</a></p>`;
         }
     </script>
 </body>

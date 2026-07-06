@@ -134,6 +134,7 @@ public final class JdbcSupport {
         r.setStudentId(rs.getString("r_student_id"));
         r.setQuantity(rs.getInt("r_quantity"));
         r.setRentalDate(rs.getObject("rental_date", LocalDate.class));
+        r.setStartTime(rs.getObject("start_time", LocalTime.class));
         r.setReturnDate(rs.getObject("return_date", LocalDate.class));
         String st = rs.getString("r_status");
         if (st != null) {

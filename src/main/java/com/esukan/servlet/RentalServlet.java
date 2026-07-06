@@ -20,6 +20,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -70,6 +71,10 @@ public class RentalServlet extends BaseHttpServlet {
             User u = UserQueries.loadUser(conn, auth.getId());
             int qty = ServletUtil.parseIntValue(payload.get("quantity"));
             LocalDate rentalDate = LocalDate.parse(String.valueOf(payload.get("rentalDate")));
+            LocalTime startTime = null;
+            if (payload.get("startTime") != null && !String.valueOf(payload.get("startTime")).isBlank()) {
+                startTime = LocalTime.parse(String.valueOf(payload.get("startTime")));
+            }
             long equipmentId = ServletUtil.parseLongValue(payload.get("equipmentId"));
             Equipment equipment = loadEquipment(conn, equipmentId)
                     .orElseThrow(() -> new RuntimeException("Equipment not found"));
@@ -91,8 +96,8 @@ public class RentalServlet extends BaseHttpServlet {
 
             String sql = """
                     INSERT INTO equipment_rentals (student_name, student_id, equipment_id, user_id, quantity,
-                    rental_date, status, deposit_amount)
-                    VALUES (?,?,?,?,?,?,'ACTIVE',?)
+                    rental_date, start_time, status, deposit_amount)
+                    VALUES (?,?,?,?,?,?,?,'ACTIVE',?)
                     """;
             try (PreparedStatement ps = conn.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)) {
                 ps.setString(1, u.getFullName());
@@ -103,7 +108,8 @@ public class RentalServlet extends BaseHttpServlet {
                 ps.setLong(4, u.getId());
                 ps.setInt(5, qty);
                 ps.setObject(6, rentalDate);
-                ps.setBigDecimal(7, deposit);
+                ps.setObject(7, startTime);
+                ps.setBigDecimal(8, deposit);
                 ps.executeUpdate();
                 ResultSet k = ps.getGeneratedKeys();
                 k.next();

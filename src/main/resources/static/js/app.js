@@ -561,7 +561,7 @@ function renderRentals(list) {
     }
 
     tbody.innerHTML = list.map(r => {
-        const showPay = r.status === 'ACTIVE' && r.paymentStatus !== 'PAID';
+        const showPay = false;
         return `
         <tr data-rental-id="${r.id}">
             <td style="color:var(--text3)">#${r.id}</td>
@@ -569,7 +569,7 @@ function renderRentals(list) {
             <td>${r.studentId}</td>
             <td>${r.equipment?.name ?? '—'}</td>
             <td>${r.quantity}</td>
-            <td>${r.rentalDate}</td>
+            <td>${r.rentalDate} ${r.startTime ? '@ ' + formatTime(r.startTime) : ''}</td>
             <td>${r.returnDate ?? '<span style="color:var(--text3)">—</span>'}</td>
             <td>${rentalStatusBadge(r.status)}</td>
             <td>${paymentStatusBadge(r.paymentStatus)}</td>
@@ -607,7 +607,7 @@ async function loadReturned() {
                 <td style="color:var(--text3)">#${r.id}</td>
                 <td>${r.equipment?.name ?? '—'}</td>
                 <td>${r.quantity}</td>
-                <td>${r.rentalDate}</td>
+                <td>${r.rentalDate} ${r.startTime ? '@ ' + formatTime(r.startTime) : ''}</td>
                 <td>${r.returnDate ?? '—'}</td>
                 <td>${rentalStatusBadge(r.status)}</td>
                 <td>
@@ -802,13 +802,7 @@ async function quickStatus(id, status, type) {
 }
 
 async function returnEquipment(id) {
-    try {
-        await authFetch(`/api/rentals/${id}/return`, { method: 'PATCH' });
-        showToast('Equipment returned successfully');
-        await loadRentals();
-    } catch (err) {
-        showToast('Return failed', true);
-    }
+    openPaymentModal(id);
 }
 
 async function deleteRecord(resource, id) {
@@ -879,7 +873,8 @@ async function submitRental(e) {
     const payload = {
         equipmentId: document.getElementById('rEquipment').value,
         quantity: document.getElementById('rQuantity').value,
-        rentalDate: document.getElementById('rDate').value
+        rentalDate: document.getElementById('rDate').value,
+        startTime: document.getElementById('rStartTime').value
     };
 
     try {
@@ -1103,6 +1098,7 @@ async function showRentalDetails(rentalId) {
         document.getElementById('rdEquipmentCategory').textContent = rental.equipment?.category || '—';
         document.getElementById('rdQuantity').textContent = rental.quantity;
         document.getElementById('rdRentalDate').textContent = rental.rentalDate;
+        document.getElementById('rdStartTime').textContent = rental.startTime ? formatTime(rental.startTime) : '—';
         document.getElementById('rdReturnDate').textContent = rental.returnDate || 'Not returned yet';
         document.getElementById('rdDeposit').textContent = `RM ${(rental.depositAmount || 0).toFixed(2)}`;
 
@@ -1116,7 +1112,7 @@ async function showRentalDetails(rentalId) {
 
         const actionSection = document.getElementById('rdActionSection');
         if (rental.status === 'ACTIVE') {
-            const showPay = rental.paymentStatus !== 'PAID';
+            const showPay = false;
             actionSection.innerHTML = `
                 ${showPay ? `<button type="button" class="btn-primary" onclick="closeModal(); openPaymentModal(${rental.id})">Pay Now</button>` : ''}
                 <button type="button" class="btn-secondary btn-return" onclick="closeModal(); returnEquipment(${rental.id})">↩ Return</button>
