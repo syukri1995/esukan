@@ -22,10 +22,15 @@ export default async function middleware(request) {
   const headers = new Headers(request.headers);
   headers.delete('host');
 
+  let body = undefined;
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    body = await request.text();
+  }
+
   return fetch(target, {
     method: request.method,
     headers,
-    body: request.method === 'GET' || request.method === 'HEAD' ? undefined : request.body,
+    body,
     redirect: 'manual',
   });
 }
