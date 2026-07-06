@@ -70,6 +70,8 @@ public final class DBConnection {
             }
             cfg.setMaximumPoolSize(10);
             cfg.setMinimumIdle(2);
+            cfg.setConnectionTimeout(5000); // 5 seconds connection timeout (fail fast)
+            cfg.setValidationTimeout(3000); // 3 seconds validation timeout
             dataSource = new HikariDataSource(cfg);
         }
     }
