@@ -32,6 +32,12 @@ public class EsukanContextListener implements ServletContextListener {
                 ensureSmokeUsers(conn);
             }
         } catch (Exception e) {
+            System.err.println("=====================================================");
+            System.err.println("CRITICAL ERROR: Failed to initialize database!");
+            e.printStackTrace();
+            System.err.println("=====================================================");
+            // Force Tomcat and the Docker container to exit immediately!
+            System.exit(1);
             throw new IllegalStateException("Failed to initialize database", e);
         }
     }
