@@ -126,10 +126,10 @@ function navigateTo(page) {
     document.getElementById('pageTitle').textContent = titles[page] || page;
 
     const btn = document.getElementById('topbarActionBtn');
-    if (page === 'rentals') {
+    if (page === 'rentals' || page === 'equipment') {
         btn.textContent = '+ New Rental';
         btn.style.display = '';
-    } else if (page === 'users') {
+    } else if (page === 'users' || page === 'returned') {
         btn.style.display = 'none';
     } else {
         btn.textContent = '+ New Booking';
@@ -165,7 +165,7 @@ function navigateTo(page) {
 
 function openPrimaryAction() {
     const activePage = document.querySelector('.nav-item.active')?.dataset.page;
-    if (activePage === 'rentals') {
+    if (activePage === 'rentals' || activePage === 'equipment') {
         openRentalModal();
     } else {
         openBookingModal();
@@ -234,7 +234,10 @@ async function loadFacilitiesForSelect() {
         const facilities = await authFetch('/api/facilities/active').then(r => r.json());
         const sel = document.getElementById('peakFacilitySelect');
         sel.innerHTML = '<option value="">Select facility...</option>' +
-            facilities.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
+            facilities.map(f => {
+                const costText = (f.costPerHour || f.cost_per_hour) ? ` - RM ${Number(f.costPerHour || f.cost_per_hour).toFixed(2)}/hr` : ' - RM 0.00/hr';
+                return `<option value="${f.id}">${f.name}${costText}</option>`;
+            }).join('');
     } catch (err) {
         console.error(err);
     }
@@ -326,6 +329,9 @@ function renderFacilities(list) {
             <div class="facility-card-meta">
                 <span class="badge ${f.type === 'BADMINTON' ? 'badge-blue' : 'badge-orange'}">${f.type}</span>
                 <span class="badge ${f.isActive ? 'badge-green' : 'badge-gray'}">${f.isActive ? 'Active' : 'Inactive'}</span>
+            </div>
+            <div style="margin-top: 14px; display: flex; justify-content: flex-end;">
+                <button class="btn-icon" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 4px;" onclick="showFacilityDetails(${f.id})">🔍 Details</button>
             </div>
         </div>`).join('');
 }
@@ -463,6 +469,7 @@ function renderBookings(list) {
             <td>${statusBadge(b.status)}</td>
             <td>
                 <div style="display:flex;gap:6px;flex-wrap:wrap">
+                    <button class="btn-icon" onclick="showBookingDetails(${b.id})">🔍 Details</button>
                     ${isAdmin() && b.status === 'PENDING' ? `
                         <button class="btn-icon btn-confirm" onclick="quickStatus(${b.id}, 'CONFIRMED', 'bookings')">✓</button>
                         <button class="btn-icon btn-cancel" onclick="quickStatus(${b.id}, 'CANCELLED', 'bookings')">✕</button>
@@ -568,6 +575,7 @@ function renderRentals(list) {
             <td>${paymentStatusBadge(r.paymentStatus)}</td>
             <td>
                 <div style="display:flex;gap:6px;flex-wrap:wrap">
+                    <button type="button" class="btn-icon" onclick="showRentalDetails(${r.id})">🔍 Details</button>
                     ${showPay ? `<button type="button" class="btn-icon btn-confirm" onclick="openPaymentModal(${r.id})">Pay Now</button>` : ''}
                     ${r.status === 'ACTIVE' ? `<button class="btn-icon btn-return" onclick="returnEquipment(${r.id})">↩ Return</button>` : ''}
                     ${isAdmin() ? `<button class="btn-icon btn-cancel" onclick="deleteRecord('rentals', ${r.id})">🗑</button>` : ''}
@@ -586,12 +594,12 @@ function filterRentals(btn, status) {
 
 async function loadReturned() {
     const tbody = document.getElementById('returnedTableBody');
-    tbody.innerHTML = '<tr><td colspan="6" class="loading-msg">Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="loading-msg">Loading...</td></tr>';
     try {
         const list = await authFetch('/api/rentals').then(r => r.json());
         const returned = list.filter(r => r.status === 'RETURNED');
         if (returned.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="loading-msg">No returned items yet</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="loading-msg">No returned items yet</td></tr>';
             return;
         }
         tbody.innerHTML = returned.map(r => `
@@ -602,9 +610,12 @@ async function loadReturned() {
                 <td>${r.rentalDate}</td>
                 <td>${r.returnDate ?? '—'}</td>
                 <td>${rentalStatusBadge(r.status)}</td>
+                <td>
+                    <button class="btn-icon" onclick="showRentalDetails(${r.id})">🔍 Details</button>
+                </td>
             </tr>`).join('');
     } catch (err) {
-        tbody.innerHTML = '<tr><td colspan="6" class="loading-msg">Failed to load</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="loading-msg">Failed to load</td></tr>';
     }
 }
 
@@ -691,7 +702,10 @@ async function openBookingModal() {
         const facilities = await authFetch('/api/facilities/active').then(r => r.json());
         const sel = document.getElementById('bFacility');
         sel.innerHTML = '<option value="">Select a facility...</option>' +
-            facilities.map(f => `<option value="${f.id}">${f.name} (${f.type})</option>`).join('');
+            facilities.map(f => {
+                const costText = (f.costPerHour || f.cost_per_hour) ? ` - RM ${Number(f.costPerHour || f.cost_per_hour).toFixed(2)}/hr` : ' - RM 0.00/hr';
+                return `<option value="${f.id}">${f.name} (${f.type})${costText}</option>`;
+            }).join('');
     } catch (err) {
         console.error(err);
     }
@@ -711,7 +725,10 @@ async function openRentalModal() {
         const equipment = await authFetch('/api/equipment/status/AVAILABLE').then(r => r.json());
         const sel = document.getElementById('rEquipment');
         sel.innerHTML = '<option value="">Select equipment...</option>' +
-            equipment.map(eq => `<option value="${eq.id}">${eq.name} (${eq.quantity} available)</option>`).join('');
+            equipment.map(eq => {
+                const costText = (eq.costPerHour || eq.cost_per_hour) ? ` - RM ${Number(eq.costPerHour || eq.cost_per_hour).toFixed(2)}/hr` : ' - RM 0.00/hr';
+                return `<option value="${eq.id}">${eq.name} (${eq.quantity} available)${costText}</option>`;
+            }).join('');
     } catch (err) {
         console.error(err);
     }
@@ -1010,4 +1027,155 @@ function showToast(message, isError = false) {
     toast.className = 'toast show' + (isError ? ' error' : '');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// =============================================
+// DETAIL MODALS VIEW TRIGGERS
+// =============================================
+async function showFacilityDetails(facilityId) {
+    try {
+        const facility = await authFetch(`/api/facilities/${facilityId}`).then(r => r.json());
+        
+        // Load equipment if empty to resolve names
+        if (!allEquipment || allEquipment.length === 0) {
+            allEquipment = await authFetch('/api/equipment').then(r => r.json());
+        }
+
+        const eqNames = (facility.equipmentIds || []).map(id => {
+            const eq = allEquipment.find(e => e.id === id);
+            return eq ? eq.name : `#${id}`;
+        });
+
+        document.getElementById('fdTitle').textContent = facility.name;
+        document.getElementById('fdDesc').textContent = facility.description || 'No description available.';
+        document.getElementById('fdCost').textContent = `RM ${(facility.costPerHour || 0).toFixed(2)}`;
+        
+        const openTime = formatTime(facility.effectiveOpenTime || facility.openTime);
+        const closeTime = formatTime(facility.effectiveCloseTime || facility.closeTime);
+        document.getElementById('fdHours').textContent = `${openTime} – ${closeTime}`;
+        
+        const statusBadge = document.getElementById('fdStatusBadge');
+        statusBadge.textContent = facility.isActive ? 'Active' : 'Inactive';
+        statusBadge.className = `badge ${facility.isActive ? 'badge-green' : 'badge-gray'}`;
+
+        const typeBadge = document.getElementById('fdTypeBadge');
+        typeBadge.textContent = facility.type;
+        typeBadge.className = `badge ${facility.type === 'BADMINTON' ? 'badge-blue' : 'badge-orange'}`;
+
+        document.getElementById('fdIcon').textContent = facility.type === 'BADMINTON' ? '🏸' : '⚽';
+
+        const eqListDiv = document.getElementById('fdEquipmentList');
+        if (eqNames.length > 0) {
+            eqListDiv.innerHTML = eqNames.map(name => `<span class="badge badge-gray">${name}</span>`).join('');
+        } else {
+            eqListDiv.innerHTML = '<span style="font-size: 13px; color: var(--text3);">No equipment associated</span>';
+        }
+
+        const bookBtn = document.getElementById('fdBookBtn');
+        if (facility.isActive) {
+            bookBtn.style.display = 'block';
+            bookBtn.onclick = () => {
+                closeModal();
+                openBookingModal(facility.id);
+            };
+        } else {
+            bookBtn.style.display = 'none';
+        }
+
+        openModal('facilityDetailModal');
+    } catch (err) {
+        console.error(err);
+        showToast('Failed to load facility details');
+    }
+}
+
+async function showRentalDetails(rentalId) {
+    try {
+        let rental = allRentals.find(r => r.id === rentalId);
+        if (!rental) {
+            rental = await authFetch(`/api/rentals/${rentalId}`).then(r => r.json());
+        }
+
+        document.getElementById('rdTitle').textContent = `Rental Details #${rental.id}`;
+        document.getElementById('rdStudentName').textContent = rental.studentName;
+        document.getElementById('rdStudentId').textContent = rental.studentId;
+        document.getElementById('rdEquipmentName').textContent = rental.equipment?.name || '—';
+        document.getElementById('rdEquipmentCategory').textContent = rental.equipment?.category || '—';
+        document.getElementById('rdQuantity').textContent = rental.quantity;
+        document.getElementById('rdRentalDate').textContent = rental.rentalDate;
+        document.getElementById('rdReturnDate').textContent = rental.returnDate || 'Not returned yet';
+        document.getElementById('rdDeposit').textContent = `RM ${(rental.depositAmount || 0).toFixed(2)}`;
+
+        const statusContainer = document.getElementById('rdStatusBadgeContainer');
+        statusContainer.innerHTML = rentalStatusBadge(rental.status);
+
+        const payStatusContainer = document.getElementById('rdPaymentStatusContainer');
+        payStatusContainer.innerHTML = paymentStatusBadge(rental.paymentStatus);
+
+        document.getElementById('rdCreatedAt').textContent = formatDateTime(rental.createdAt);
+
+        const actionSection = document.getElementById('rdActionSection');
+        if (rental.status === 'ACTIVE') {
+            const showPay = rental.paymentStatus !== 'PAID';
+            actionSection.innerHTML = `
+                ${showPay ? `<button type="button" class="btn-primary" onclick="closeModal(); openPaymentModal(${rental.id})">Pay Now</button>` : ''}
+                <button type="button" class="btn-secondary btn-return" onclick="closeModal(); returnEquipment(${rental.id})">↩ Return</button>
+            `;
+        } else {
+            actionSection.innerHTML = '';
+        }
+
+        openModal('rentalDetailModal');
+    } catch (err) {
+        console.error(err);
+        showToast('Failed to load rental details');
+    }
+}
+
+async function showBookingDetails(bookingId) {
+    try {
+        let booking = allBookings.find(b => b.id === bookingId);
+        if (!booking) {
+            booking = await authFetch(`/api/bookings/${bookingId}`).then(r => r.json());
+        }
+
+        document.getElementById('bdTitle').textContent = `Booking Details #${booking.id}`;
+        document.getElementById('bdStudentName').textContent = booking.studentName;
+        document.getElementById('bdStudentId').textContent = booking.studentId;
+        document.getElementById('bdStudentEmail').textContent = booking.studentEmail;
+        document.getElementById('bdFacilityName').textContent = booking.facility?.name || '—';
+        document.getElementById('bdFacilityType').textContent = booking.facility?.type || '—';
+        document.getElementById('bdBookingDate').textContent = booking.bookingDate;
+        
+        const openTime = formatTime(booking.startTime);
+        const closeTime = formatTime(booking.endTime);
+        document.getElementById('bdTime').textContent = `${openTime} – ${closeTime}`;
+        
+        document.getElementById('bdCost').textContent = `RM ${(booking.estimatedCost || 0).toFixed(2)}`;
+        
+        const statusContainer = document.getElementById('bdStatusContainer');
+        statusContainer.innerHTML = statusBadge(booking.status);
+
+        const payStatusContainer = document.getElementById('bdPaymentStatusContainer');
+        payStatusContainer.innerHTML = paymentStatusBadge(booking.paymentStatus);
+
+        document.getElementById('bdNotes').textContent = booking.notes || '—';
+
+        document.getElementById('bdCreatedAt').textContent = formatDateTime(booking.createdAt);
+
+        const actionSection = document.getElementById('bdActionSection');
+        if (isAdmin() && booking.status === 'PENDING') {
+            actionSection.innerHTML = `
+                <button type="button" class="btn-primary btn-confirm" onclick="closeModal(); quickStatus(${booking.id}, 'CONFIRMED', 'bookings')">✓ Confirm</button>
+                <button type="button" class="btn-secondary btn-cancel" onclick="closeModal(); quickStatus(${booking.id}, 'CANCELLED', 'bookings')">✕ Cancel</button>
+            `;
+        } else {
+            actionSection.innerHTML = '';
+        }
+
+        openModal('bookingDetailModal');
+    } catch (err) {
+        console.error(err);
+        showToast('Failed to load booking details');
+    }
 }

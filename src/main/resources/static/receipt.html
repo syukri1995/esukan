@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Sukan — Payment Receipt</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <style>
+        .receipt-container {
+            max-width: 500px;
+            margin: 40px auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+        .receipt-header {
+            margin-bottom: 20px;
+            border-bottom: 2px dashed #eee;
+            padding-bottom: 20px;
+        }
+        .receipt-title {
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 24px;
+            color: #2c3e50;
+        }
+        .receipt-details {
+            text-align: left;
+            margin-bottom: 20px;
+            font-family: 'DM Sans', sans-serif;
+            color: #555;
+        }
+        .receipt-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .receipt-label {
+            font-weight: 600;
+        }
+        .qr-code-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+        .back-btn {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background: #2c3e50;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        .back-btn:hover {
+            background: #1a252f;
+        }
+    </style>
+</head>
+<body style="background: #f4f7f6;">
+    <div class="receipt-container">
+        <div class="receipt-header">
+            <div class="receipt-title">Payment Receipt</div>
+            <p style="color: #27ae60; font-weight: 600; margin-top: 10px;">Payment Successful</p>
+        </div>
+        <div class="receipt-details" id="receiptDetails">
+            <p>Loading receipt details...</p>
+        </div>
+        <div class="qr-code-container" id="qrcode" title="Scan to verify payment">
+        </div>
+        <p style="font-size: 12px; color: #888; margin-top: 10px;">Show this QR code to the staff to verify your payment.</p>
+        <a href="/index.html" class="back-btn">Back to Dashboard</a>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const refId = urlParams.get('ref');
+
+        if (!refId) {
+            document.getElementById('receiptDetails').innerHTML = '<p style="color:red">No reference ID provided.</p>';
+        } else {
+            fetch(`/api/verify-payment/${refId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) {
+                        document.getElementById('receiptDetails').innerHTML = `<p style="color:red">${data.error}</p>`;
+                        return;
+                    }
+
+                    const details = `
+                        <div class="receipt-row"><span class="receipt-label">Ref ID:</span> <span>${data.referenceId}</span></div>
+                        <div class="receipt-row"><span class="receipt-label">Amount:</span> <span>RM ${data.amount.toFixed(2)}</span></div>
+                        <div class="receipt-row"><span class="receipt-label">Method:</span> <span>${data.method || 'N/A'}</span></div>
+                        <div class="receipt-row"><span class="receipt-label">Date:</span> <span>${new Date(data.paidAt).toLocaleString()}</span></div>
+                        <div class="receipt-row"><span class="receipt-label">For:</span> <span>${data.type === 'BOOKING' ? data.facilityName : data.equipmentName}</span></div>
+                        <div class="receipt-row"><span class="receipt-label">Name:</span> <span>${data.studentName}</span></div>
+                    `;
+                    document.getElementById('receiptDetails').innerHTML = details;
+
+                    const verifyUrl = window.location.origin + `/verify.html?ref=${refId}`;
+                    QRCode.toCanvas(verifyUrl, { width: 180, margin: 1 }, function (err, canvas) {
+                        if (err) console.error(err);
+                        else {
+                            const qrContainer = document.getElementById('qrcode');
+                            qrContainer.innerHTML = '';
+                            qrContainer.appendChild(canvas);
+                        }
+                    });
+                })
+                .catch(err => {
+                    document.getElementById('receiptDetails').innerHTML = '<p style="color:red">Failed to load receipt.</p>';
+                });
+        }
+    </script>
+</body>
+</html>

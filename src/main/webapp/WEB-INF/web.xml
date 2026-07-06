@@ -89,6 +89,15 @@
         <url-pattern>/api/payments/*</url-pattern>
     </servlet-mapping>
 
+    <servlet>
+        <servlet-name>PaymentVerificationServlet</servlet-name>
+        <servlet-class>com.esukan.servlet.PaymentVerificationServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>PaymentVerificationServlet</servlet-name>
+        <url-pattern>/api/verify-payment/*</url-pattern>
+    </servlet-mapping>
+
 
     <servlet>
         <servlet-name>WaitlistServlet</servlet-name>

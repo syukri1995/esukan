@@ -55,6 +55,9 @@ public final class SchemaMigration {
         if (!columnExists(conn, "payments", "booking_id")) {
             exec(conn, "ALTER TABLE payments ADD COLUMN booking_id BIGINT NULL");
         }
+        if (!columnExists(conn, "payments", "reference_id")) {
+            exec(conn, "ALTER TABLE payments ADD COLUMN reference_id VARCHAR(50) NULL UNIQUE");
+        }
         relaxPaymentsRentalId(conn);
     }
 

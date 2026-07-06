@@ -282,6 +282,12 @@ async function submitGatewayPayment() {
 
         if (processRes.ok && processData.status === 'PAID') {
             document.getElementById('payTxnRef').textContent = processData.transactionRef || '—';
+            
+            const receiptBtn = document.getElementById('viewReceiptBtn');
+            if (receiptBtn && processData.transactionRef) {
+                receiptBtn.href = `/receipt.html?ref=${processData.transactionRef}`;
+            }
+
             document.getElementById('gatewayResultSuccess').classList.add('visible');
             if (modal) modal.classList.remove('failure-mode');
             showToast('Payment successful');

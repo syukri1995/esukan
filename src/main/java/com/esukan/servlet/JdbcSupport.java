@@ -180,6 +180,11 @@ public final class JdbcSupport {
         if (st != null) {
             p.setStatus(Payment.PaymentStatus.valueOf(st.trim()));
         }
+        try {
+            p.setReferenceId(rs.getString("reference_id"));
+        } catch (SQLException ignored) {
+            // column may be absent on older DB
+        }
         p.setPaidAt(ts(rs.getTimestamp("paid_at")));
         p.setCreatedAt(ts(rs.getTimestamp("created_at")));
         return p;

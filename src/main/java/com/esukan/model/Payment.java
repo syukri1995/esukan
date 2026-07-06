@@ -18,6 +18,7 @@ public class Payment {
     private Long bookingId;
     private PaymentMethod method;
     private BigDecimal amount;
+    private String referenceId;
     private PaymentStatus status = PaymentStatus.PENDING;
     private LocalDateTime paidAt;
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -68,6 +69,14 @@ public class Payment {
 
     public void setStatus(PaymentStatus status) {
         this.status = status;
+    }
+
+    public String getReferenceId() {
+        return referenceId;
+    }
+
+    public void setReferenceId(String referenceId) {
+        this.referenceId = referenceId;
     }
 
     public LocalDateTime getPaidAt() {

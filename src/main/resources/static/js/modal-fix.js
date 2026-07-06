@@ -3,7 +3,7 @@
  * Loaded after features-ui.js.
  */
 (function () {
-    async function openBookingModalFixed() {
+    async function openBookingModalFixed(preSelectedFacilityId) {
         try {
             const facilities = await authFetch('/api/facilities/active').then(r => r.json());
             const sel = document.getElementById('bFacility');
@@ -19,6 +19,11 @@
             joinBtn.style.display = 'none';
         }
         document.getElementById('bookingForm').reset();
+        
+        if (preSelectedFacilityId) {
+            document.getElementById('bFacility').value = preSelectedFacilityId;
+        }
+
         if (typeof setDefaultDates === 'function') {
             setDefaultDates();
         }
@@ -40,9 +45,13 @@
         if (legacyCost) legacyCost.style.display = 'none';
 
         const facilitySel = document.getElementById('bFacility');
-        if (facilitySel && typeof onFacilityChangeForHours === 'function') {
+        if (facilitySel) {
             if (facilitySel.value) {
-                onFacilityChangeForHours();
+                if (typeof onBookingFacilityChange === 'function') {
+                    await onBookingFacilityChange();
+                } else if (typeof onFacilityChangeForHours === 'function') {
+                    await onFacilityChangeForHours();
+                }
             }
         }
         if (typeof updateBookingCostEstimate === 'function') {

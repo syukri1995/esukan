@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 public class PaymentServlet extends BaseHttpServlet {
 
@@ -117,11 +118,13 @@ public class PaymentServlet extends BaseHttpServlet {
                 if ("PAID".equalsIgnoreCase(b.getPaymentStatus())) {
                     throw new RuntimeException("Booking is already paid");
                 }
-                sql = "INSERT INTO payments (rental_id, booking_id, method, amount, status) VALUES (NULL, ?, ?, ?, 'PENDING')";
+                String refId = UUID.randomUUID().toString();
+                sql = "INSERT INTO payments (rental_id, booking_id, method, amount, status, reference_id) VALUES (NULL, ?, ?, ?, 'PENDING', ?)";
                 try (PreparedStatement ps = conn.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)) {
                     ps.setLong(1, bookingId);
                     ps.setString(2, method.name());
                     ps.setBigDecimal(3, amount);
+                    ps.setString(4, refId);
                     ps.executeUpdate();
                     long newId = readGeneratedId(ps);
                     ServletUtil.writeJson(resp, HttpServletResponse.SC_OK, findById(conn, newId).orElseThrow());
@@ -135,11 +138,13 @@ public class PaymentServlet extends BaseHttpServlet {
                 return;
             }
             amount = rental.get().getDepositAmount();
-            sql = "INSERT INTO payments (rental_id, booking_id, method, amount, status) VALUES (?, NULL, ?, ?, 'PENDING')";
+            String refId = UUID.randomUUID().toString();
+            sql = "INSERT INTO payments (rental_id, booking_id, method, amount, status, reference_id) VALUES (?, NULL, ?, ?, 'PENDING', ?)";
             try (PreparedStatement ps = conn.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)) {
                 ps.setLong(1, rentalId);
                 ps.setString(2, method.name());
                 ps.setBigDecimal(3, amount);
+                ps.setString(4, refId);
                 ps.executeUpdate();
                 long newId = readGeneratedId(ps);
                 ServletUtil.writeJson(resp, HttpServletResponse.SC_OK, findById(conn, newId).orElseThrow());
@@ -187,7 +192,8 @@ public class PaymentServlet extends BaseHttpServlet {
         if (pay.getBookingId() != null) {
             confirmBookingAfterPayment(conn, pay.getBookingId());
         }
-        String txnRef = "ESP-" + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE) + "-"
+        
+        String txnRef = pay.getReferenceId() != null ? pay.getReferenceId() : "ESP-" + pay.getCreatedAt().toLocalDate().format(DateTimeFormatter.BASIC_ISO_DATE) + "-"
                 + String.format("%05d", paymentId);
         Map<String, Object> result = new HashMap<>();
         result.put("status", "PAID");
@@ -294,7 +300,7 @@ public class PaymentServlet extends BaseHttpServlet {
 
     private static Optional<Payment> findById(Connection conn, long id) throws java.sql.SQLException {
         try (PreparedStatement ps = conn.prepareStatement(
-                "SELECT id, rental_id, booking_id, method, amount, status, paid_at, created_at FROM payments WHERE id = ?")) {
+                "SELECT id, rental_id, booking_id, method, amount, status, reference_id, paid_at, created_at FROM payments WHERE id = ?")) {
             ps.setLong(1, id);
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) {
@@ -308,7 +314,7 @@ public class PaymentServlet extends BaseHttpServlet {
     private static List<Payment> listByRental(Connection conn, long rentalId) throws java.sql.SQLException {
         List<Payment> list = new ArrayList<>();
         try (PreparedStatement ps = conn.prepareStatement(
-                "SELECT id, rental_id, booking_id, method, amount, status, paid_at, created_at FROM payments WHERE rental_id = ? ORDER BY id")) {
+                "SELECT id, rental_id, booking_id, method, amount, status, reference_id, paid_at, created_at FROM payments WHERE rental_id = ? ORDER BY id")) {
             ps.setLong(1, rentalId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
