@@ -56,7 +56,8 @@ public final class SchemaMigration {
             exec(conn, "ALTER TABLE payments ADD COLUMN booking_id BIGINT NULL");
         }
         if (!columnExists(conn, "payments", "reference_id")) {
-            exec(conn, "ALTER TABLE payments ADD COLUMN reference_id VARCHAR(50) NULL UNIQUE");
+            exec(conn, "ALTER TABLE payments ADD COLUMN reference_id VARCHAR(50) NULL");
+            execIgnore(conn, "CREATE UNIQUE INDEX idx_payments_reference ON payments(reference_id)");
         }
         if (!columnExists(conn, "equipment_rentals", "start_time")) {
             exec(conn, "ALTER TABLE equipment_rentals ADD COLUMN start_time TIME NULL");
