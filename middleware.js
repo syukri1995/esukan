@@ -21,12 +21,24 @@ export default async function middleware(request) {
   const target = `${backend.replace(/\/$/, '')}${incoming.pathname}${incoming.search}`;
   console.log(`Proxying ${request.method} ${incoming.pathname} -> ${target}`);
 
-  const headers = new Headers(request.headers);
-  headers.delete('host');
-  headers.delete('connection');
-  headers.delete('content-length');
-  headers.delete('content-encoding');
-  headers.delete('transfer-encoding');
+  // Create clean headers to forward (prevent Vercel internal headers from breaking Render/Cloudflare)
+  const headers = new Headers();
+  const forwardKeys = [
+    'content-type',
+    'authorization',
+    'cookie',
+    'accept',
+    'user-agent',
+    'accept-language',
+    'referer',
+    'origin'
+  ];
+  for (const key of forwardKeys) {
+    const val = request.headers.get(key);
+    if (val) {
+      headers.set(key, val);
+    }
+  }
 
   let body = undefined;
   if (request.method !== 'GET' && request.method !== 'HEAD') {
