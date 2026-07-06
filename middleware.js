@@ -21,6 +21,10 @@ export default async function middleware(request) {
   const target = `${backend.replace(/\/$/, '')}${incoming.pathname}${incoming.search}`;
   const headers = new Headers(request.headers);
   headers.delete('host');
+  headers.delete('connection');
+  headers.delete('content-length');
+  headers.delete('content-encoding');
+  headers.delete('transfer-encoding');
 
   let body = undefined;
   if (request.method !== 'GET' && request.method !== 'HEAD') {
