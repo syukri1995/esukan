@@ -78,6 +78,9 @@ public class RentalServlet extends BaseHttpServlet {
             long equipmentId = ServletUtil.parseLongValue(payload.get("equipmentId"));
             Equipment equipment = loadEquipment(conn, equipmentId)
                     .orElseThrow(() -> new RuntimeException("Equipment not found"));
+            if (equipment.getQuantity() < qty) {
+                throw new RuntimeException("Not enough equipment available. Only " + equipment.getQuantity() + " left.");
+            }
 
             BigDecimal deposit;
             if (payload.get("depositAmount") != null) {
@@ -114,6 +117,13 @@ public class RentalServlet extends BaseHttpServlet {
                 ResultSet k = ps.getGeneratedKeys();
                 k.next();
                 long newId = k.getLong(1);
+                
+                try (PreparedStatement updatePs = conn.prepareStatement("UPDATE equipment SET quantity = quantity - ? WHERE id = ?")) {
+                    updatePs.setInt(1, qty);
+                    updatePs.setLong(2, equipmentId);
+                    updatePs.executeUpdate();
+                }
+
                 ServletUtil.writeJson(resp, HttpServletResponse.SC_OK, findById(conn, newId).orElseThrow());
             }
         } catch (RuntimeException e) {
@@ -146,10 +156,19 @@ public class RentalServlet extends BaseHttpServlet {
                 ServletUtil.writeJson(resp, HttpServletResponse.SC_FORBIDDEN, Map.of());
                 return;
             }
+            if (r.get().getStatus() == EquipmentRental.RentalStatus.RETURNED) {
+                ServletUtil.writeJson(resp, HttpServletResponse.SC_BAD_REQUEST, Map.of("error", "Already returned"));
+                return;
+            }
             try (PreparedStatement ps = conn.prepareStatement(
                     "UPDATE equipment_rentals SET status='RETURNED', return_date=CURRENT_DATE WHERE id=?")) {
                 ps.setLong(1, id);
                 ps.executeUpdate();
+            }
+            try (PreparedStatement updatePs = conn.prepareStatement("UPDATE equipment SET quantity = quantity + ? WHERE id = ?")) {
+                updatePs.setInt(1, r.get().getQuantity());
+                updatePs.setLong(2, r.get().getEquipment().getId());
+                updatePs.executeUpdate();
             }
             ServletUtil.writeJson(resp, HttpServletResponse.SC_OK, findById(conn, id).orElseThrow());
         } catch (Exception e) {
@@ -173,10 +192,22 @@ public class RentalServlet extends BaseHttpServlet {
             return;
         }
         long id = Long.parseLong(segs[0]);
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement("DELETE FROM equipment_rentals WHERE id = ?")) {
-            ps.setLong(1, id);
-            ps.executeUpdate();
+        try (Connection conn = DBConnection.getConnection()) {
+            Optional<EquipmentRental> r = RentalQueries.findById(conn, id);
+            
+            try (PreparedStatement ps = conn.prepareStatement("DELETE FROM equipment_rentals WHERE id = ?")) {
+                ps.setLong(1, id);
+                ps.executeUpdate();
+            }
+            
+            if (r.isPresent() && r.get().getStatus() != EquipmentRental.RentalStatus.RETURNED) {
+                try (PreparedStatement updatePs = conn.prepareStatement("UPDATE equipment SET quantity = quantity + ? WHERE id = ?")) {
+                    updatePs.setInt(1, r.get().getQuantity());
+                    updatePs.setLong(2, r.get().getEquipment().getId());
+                    updatePs.executeUpdate();
+                }
+            }
+            
             resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
         } catch (Exception e) {
             ServletUtil.writeJson(resp, HttpServletResponse.SC_BAD_REQUEST, Map.of("error", e.getMessage()));

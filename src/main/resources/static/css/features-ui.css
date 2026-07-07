@@ -165,3 +165,104 @@
     margin: 0;
     color: var(--color-text-primary, inherit);
 }
+
+/* --- FullCalendar Premium Overrides --- */
+:root {
+  --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: var(--bg2);
+  --fc-neutral-text-color: var(--text2);
+  --fc-border-color: var(--border);
+  --fc-button-text-color: var(--text);
+  --fc-button-bg-color: var(--bg3);
+  --fc-button-border-color: var(--border);
+  --fc-button-hover-bg-color: var(--border);
+  --fc-button-hover-border-color: var(--border);
+  --fc-button-active-bg-color: var(--accent);
+  --fc-button-active-border-color: var(--accent);
+  --fc-event-bg-color: var(--accent);
+  --fc-event-border-color: var(--accent);
+  --fc-event-text-color: #fff;
+  --fc-event-selected-overlay-color: rgba(0, 0, 0, 0.25);
+  --fc-more-link-bg-color: var(--bg3);
+  --fc-more-link-text-color: var(--text);
+  --fc-today-bg-color: rgba(57, 224, 123, 0.05);
+  --fc-now-indicator-color: var(--accent);
+}
+
+.fc {
+  font-family: 'DM Sans', sans-serif;
+  color: var(--text);
+}
+.fc-theme-standard .fc-scrollgrid {
+  border: 1px solid var(--border) !important;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(26, 30, 40, 0.4);
+  backdrop-filter: blur(10px);
+}
+.fc-theme-standard th, .fc-theme-standard td {
+  border-color: var(--border) !important;
+}
+.fc .fc-col-header-cell-cushion {
+  color: var(--text);
+  padding: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.fc-day-today {
+  background: rgba(57, 224, 123, 0.05) !important;
+}
+.fc-event {
+  border-radius: 8px !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+  opacity: 0.95;
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+  padding: 2px 4px;
+}
+.fc-event:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.4) !important;
+  opacity: 1;
+  z-index: 5 !important;
+}
+.fc-event-main {
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff !important;
+  padding: 2px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+}
+.fc-timegrid-slot-label-cushion {
+  color: var(--text2) !important;
+  font-size: 11px;
+}
+.fc-button {
+  background: var(--bg3) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text) !important;
+  box-shadow: none !important;
+  text-transform: capitalize !important;
+  font-weight: 500 !important;
+  border-radius: 8px !important;
+  padding: 6px 16px !important;
+  transition: all 0.2s ease !important;
+}
+.fc-button:hover {
+  background: var(--border) !important;
+}
+.fc-button-active, .fc-button:active {
+  background: var(--accent) !important;
+  color: #000 !important;
+  border-color: var(--accent) !important;
+}
+.fc-toolbar-title {
+  font-family: 'Syne', sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 22px !important;
+}
+.fc-timegrid-event .fc-event-time {
+  font-size: 10px;
+  opacity: 0.8;
+  margin-bottom: 2px;
+}

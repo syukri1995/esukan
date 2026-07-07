@@ -1,6 +1,7 @@
 /* E-Sukan feature extensions: hours, pricing, admin editors, tournament brackets */
 
 let allFacilitiesCache = [];
+let facilityCalendarInstance = null;
 
 function fmtTime(t) {
     if (!t) return '—';
@@ -167,9 +168,55 @@ async function loadFacilities() {
         allFacilitiesCache = allFacilities;
         renderFacilities(allFacilities);
         updateAdminToolbarsVisibility();
+        
+        try {
+            const bookings = await authFetch('/api/bookings/calendar').then(r => r.json());
+            renderFacilityCalendar(bookings);
+        } catch(e) {
+            console.error("Failed to load calendar bookings", e);
+        }
     } catch (err) {
         document.getElementById('facilitiesGrid').innerHTML = '<div class="loading-msg">Failed to load facilities</div>';
     }
+}
+
+function renderFacilityCalendar(bookings) {
+    const calendarEl = document.getElementById('facilityCalendar');
+    if (!calendarEl || typeof FullCalendar === 'undefined') return;
+    
+    if (facilityCalendarInstance) {
+        facilityCalendarInstance.destroy();
+    }
+    
+    const events = bookings
+        .filter(b => b.status === 'CONFIRMED' || b.status === 'PENDING')
+        .map(b => {
+            const start = b.bookingDate + 'T' + b.startTime;
+            const end = b.bookingDate + 'T' + b.endTime;
+            const title = `${b.facility ? b.facility.name : 'Unknown Facility'} - ${b.studentName || 'Student'}`;
+            return {
+                title: title,
+                start: start,
+                end: end,
+                color: b.status === 'CONFIRMED' ? '#27ae60' : '#f39c12'
+            };
+        });
+        
+    facilityCalendarInstance = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'timeGridWeek',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'timeGridWeek,timeGridDay'
+        },
+        events: events,
+        slotMinTime: '08:00:00',
+        slotMaxTime: '23:00:00',
+        allDaySlot: false,
+        height: 'auto'
+    });
+    
+    facilityCalendarInstance.render();
 }
 
 function renderFacilities(list) {

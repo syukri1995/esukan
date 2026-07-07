@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="/css/payment-gateway.css">
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js'></script>
 </head>
 <body>
 
@@ -144,6 +145,33 @@
 
     <!-- FACILITIES PAGE -->
     <section class="page" id="page-facilities">
+        <div class="card" style="margin-bottom: 20px;">
+            <div class="card-header">
+                <div class="card-title">Facility Schedule</div>
+            </div>
+            <style>
+                /* Force High Specificity Overrides for FullCalendar */
+                #page-facilities .fc { font-family: 'DM Sans', sans-serif !important; color: var(--text) !important; }
+                #page-facilities .fc-theme-standard .fc-scrollgrid { border: 1px solid var(--border) !important; border-radius: 12px; overflow: hidden; background: rgba(26, 30, 40, 0.4); backdrop-filter: blur(10px); box-shadow: var(--shadow); }
+                #page-facilities .fc-theme-standard th, #page-facilities .fc-theme-standard td { border-color: var(--border) !important; }
+                #page-facilities .fc-col-header-cell-cushion, 
+                #page-facilities .fc-col-header-cell-cushion *,
+                #page-facilities .fc-daygrid-day-number,
+                #page-facilities .fc-daygrid-day-number * { color: #ffffff !important; padding: 12px; font-weight: 700; text-decoration: none !important; }
+                #page-facilities .fc-col-header-cell { background-color: #2bc464 !important; }
+                #page-facilities .fc-day-today { background: rgba(57, 224, 123, 0.05) !important; }
+                #page-facilities .fc-event { border-radius: 8px !important; border: none !important; box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important; opacity: 0.95; transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s !important; padding: 2px 4px !important; cursor: pointer; }
+                #page-facilities .fc-event:hover { transform: translateY(-2px) scale(1.02) !important; box-shadow: 0 6px 16px rgba(0,0,0,0.4) !important; opacity: 1; z-index: 5 !important; }
+                #page-facilities .fc-event-main { font-size: 12px !important; font-weight: 600 !important; color: #fff !important; padding: 2px !important; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
+                #page-facilities .fc-timegrid-slot-label-cushion { color: var(--text2) !important; font-size: 11px !important; }
+                #page-facilities .fc-button { background: var(--bg3) !important; border: 1px solid var(--border) !important; color: var(--text) !important; box-shadow: none !important; text-transform: capitalize !important; font-weight: 500 !important; border-radius: 8px !important; padding: 6px 16px !important; transition: all 0.2s ease !important; }
+                #page-facilities .fc-button:hover { background: var(--border) !important; color: #fff !important; }
+                #page-facilities .fc-button-active, #page-facilities .fc-button:active { background: var(--accent) !important; color: #000 !important; border-color: var(--accent) !important; }
+                #page-facilities .fc-toolbar-title { font-family: 'Syne', sans-serif !important; font-weight: 700 !important; font-size: 22px !important; }
+                #page-facilities .fc-timegrid-event .fc-event-time { font-size: 10px !important; opacity: 0.8; margin-bottom: 2px; }
+            </style>
+            <div id="facilityCalendar" style="padding: 16px;"></div>
+        </div>
         <div class="page-toolbar">
             <div class="filter-group">
                 <button class="filter-btn active" data-filter="ALL" onclick="filterFacilities(this, 'ALL')">All</button>
@@ -743,8 +771,8 @@
 
 <script>window.ESUKAN_API_BASE = window.ESUKAN_API_BASE || '';</script>
 <script src="/js/auth.js"></script>
-<script src="/js/app.js"></script>
-<script src="/js/features-ui.js"></script>
+<script src="/js/app.js?v=2"></script>
+<script src="/js/features-ui.js?v=2"></script>
 <script src="/js/booking-hours-fix.js"></script>
 <script src="/js/booking-pricing-ui.js"></script>
 <script src="/js/booking-payment-ui.js"></script>

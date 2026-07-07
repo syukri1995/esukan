@@ -58,6 +58,10 @@ public class BookingServlet extends BaseHttpServlet {
                 ServletUtil.writeJson(resp, HttpServletResponse.SC_OK, list);
                 return;
             }
+            if (segs.length == 1 && "calendar".equals(segs[0])) {
+                ServletUtil.writeJson(resp, HttpServletResponse.SC_OK, listAll(conn));
+                return;
+            }
             if (segs.length == 1 && "dashboard".equals(segs[0])) {
                 ServletUtil.writeJson(resp, HttpServletResponse.SC_OK, dashboardStats(conn, full));
                 return;
